@@ -1,0 +1,104 @@
+API list and sample JSON
+
+Base URL
+- http://localhost:3000/api
+
+Auth
+- Use header: Authorization: Bearer <token>
+
+1) Register parent
+POST /register
+{
+  "email": "", //your email
+  "password": "123456"
+}
+
+2) Verify OTP
+POST /verify-otp
+{
+  "email": "", //your email
+  "otp": ""   //otp form email
+}
+
+3) Login (returns token)
+POST /login
+{
+  "email": "",//your email
+  "password": "123456"
+}
+
+4) Forgot password (send OTP)
+POST /forgot-password
+{
+  "email": ""//your email
+}
+
+5) Reset password
+POST /reset-password
+{
+  "email": "parent1@example.com",
+  "otp": "12345",
+  "new_password": "NewP@ssw0rd123"
+}
+
+6) View profile (auth required)
+GET /me
+
+7) Update profile (auth required)
+PUT /me
+{
+  "phone": "0901234567",
+  "full_name": "Nguyen Van A",
+  "avatar_url": "https://example.com/avatar.png"
+}
+
+8) Change password (auth required)
+PUT /me/password
+{
+  "current_password": "P@ssw0rd123",
+  "new_password": "NewP@ssw0rd123"
+}
+
+9) Add baby (auth required, parent role)
+POST /babies
+{
+  "parent_ids": ["65c9b8f2a2f1b6a9b9e1c123"],
+  "full_name": "Baby One",
+  "avatar_url": "https://example.com/baby.png",
+  "day_of_birth": "2024-11-01",
+  "gender": "male",
+  "note": ["Healthy"]
+}
+
+10) Update baby (auth required, parent role)
+PUT /babies/:id
+{
+  "full_name": "Baby One Updated",
+  "note": ["Updated note"]
+}
+
+11) Delete baby (auth required, parent role)
+DELETE /babies/:id
+
+12) List babies (auth required, parent role)
+GET /babies
+GET /babies?parent_id=65c9b8f2a2f1b6a9b9e1c123
+
+13) Get baby by share code (auth required, parent role)
+GET /babies/share?code=AB12CD34
+
+14) Share baby to current parent (auth required, parent role)
+POST /babies/share
+{
+  "code": "AB12CD34"
+}
+
+15) Record growth data (auth required, parent role)
+POST /growth-records
+{
+  "baby_id": "65c9b8f2a2f1b6a9b9e1c123",
+  "head_size": 42.5,
+  "weight": 6.2,
+  "height": 63.4,
+  "record_date": "2026-02-15T00:00:00.000Z"
+}
