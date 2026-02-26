@@ -6,7 +6,7 @@ const accountsSchema = new Schema({
     doctor_id: { type: Schema.Types.ObjectId, ref: 'Doctors' },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    phone: { type: String, unique: true },
+    phone: { type: String },
     status: { type: Boolean, default: true },
     role: { type: String, enum: ['doctor', 'parent'], required: true },
     is_verified: { type: Boolean, default: false },

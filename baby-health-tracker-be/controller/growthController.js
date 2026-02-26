@@ -2,13 +2,14 @@ const babyService = require('../services/babyService');
 const growthService = require('../services/growthService');
 
 const addGrowthRecord = async (req, res) => {
-    const { baby_id, head_size, weight, height, record_date } = req.body;
+    const { baby_id } = req.params;
+    const { head_size, weight, height, record_date } = req.body;
     const parentId = req.user ? req.user.parent_id : null;
 
     try {
         if (!baby_id || head_size === undefined || weight === undefined || height === undefined || !record_date) {
             return res.status(400).json({
-                message: 'baby_id, head_size, weight, height, and record_date are required',
+                message: 'baby_id param, head_size, weight, height, and record_date are required',
             });
         }
 
