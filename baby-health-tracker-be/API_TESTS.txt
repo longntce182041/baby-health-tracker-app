@@ -62,50 +62,95 @@ PUT /me/password
 9) Add baby (auth required, parent role)
 POST /babies
 {
-  "parent_ids": ["65c9b8f2a2f1b6a9b9e1c123"],
   "full_name": "Baby One",
   "avatar_url": "https://example.com/baby.png",
   "day_of_birth": "2024-11-01",
   "gender": "male",
-  "note": ["Healthy"]
+  "note": "Healthy"
 }
+Note: parent_id is taken from token (req.user.parent_id), not from request body.
 
 10) Update baby (auth required, parent role)
 PUT /babies/:id
 {
   "full_name": "Baby One Updated",
+  "avatar_url": "https://example.com/baby-updated.png",
+  "day_of_birth": "2024-11-02",
+  "gender": "male",
   "note": ["Updated note"]
 }
+Note: Allowed fields are full_name, avatar_url, day_of_birth, gender, note.
 
-11) Delete baby (auth required, parent role)
+11) Add baby note (auth required, parent role)
+POST /babies/:id/notes
+{
+  "content": "Bé ngủ tốt hôm nay"
+}
+or
+{
+  "note": "Bé ăn tốt hôm nay"
+}
+
+12) Delete baby (auth required, parent role)
 DELETE /babies/:id
 
-12) List babies (auth required, parent role)
+13) List babies (auth required, parent role)
 GET /babies
 GET /babies?parent_id=65c9b8f2a2f1b6a9b9e1c123
 
-13) Get baby by share code (auth required, parent role)
+14) Get baby detail (auth required, parent role)
+GET /babies/:id
+
+15) Get baby by share code (auth required, parent role)
 GET /babies/share?code=AB12CD34
 
-14) Share baby to current parent (auth required, parent role)
+16) Share baby to current parent (auth required, parent role)
 POST /babies/share
 {
   "code": "AB12CD34"
 }
 
-15) Record growth data (auth required, parent role)
-POST /growth-records
+17) Record growth data (auth required, parent role)
+POST /growth-records/:baby_id
 {
-  "baby_id": "65c9b8f2a2f1b6a9b9e1c123",
   "head_size": 42.5,
   "weight": 6.2,
   "height": 63.4,
   "record_date": "2026-02-15T00:00:00.000Z"
 }
 
-16) View growth chart (auth required, parent role)
+18) View growth chart (auth required, parent role)
 GET /growth-records?baby_id=65c9b8f2a2f1b6a9b9e1c123
 
-17) Compare growth with standard (auth required, parent role)
+19) Compare growth with standard (auth required, parent role)
 GET /growth-records/compare?baby_id=65c9b8f2a2f1b6a9b9e1c123
 GET /growth-records/compare?baby_id=65c9b8f2a2f1b6a9b9e1c123&record_id=65ca9cf7d4f0b8a317a23abc
+
+20) Create health diary (auth required, parent role)
+POST /health-logs/:baby_id
+{
+  "tempurature": 37.1,
+  "sleep": 12,
+  "image_urls": ["https://example.com/health-log-1.png"],
+  "symptoms": ["cough"],
+  "activities": ["play", "walk"],
+  "eating": "milk 3 times",
+  "mood": "happy",
+  "notes": "No unusual signs"
+}
+Note: log_date is auto-set to current datetime by server.
+
+21) View health diary (auth required, parent role)
+GET /health-logs?baby_id=65c9b8f2a2f1b6a9b9e1c123
+
+22) Update health diary (auth required, parent role)
+PUT /health-logs/:id
+{
+  "tempurature": 37.4,
+  "sleep": 11,
+  "symptoms": ["cough", "runny nose"],
+  "notes": "Baby is a bit tired in the evening"
+}
+
+23) Delete health diary (auth required, parent role)
+DELETE /health-logs/:id

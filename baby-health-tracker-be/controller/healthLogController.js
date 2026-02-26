@@ -2,9 +2,8 @@ const babyService = require('../services/babyService');
 const healthLogService = require('../services/healthLogService');
 
 const createHealthLog = async (req, res) => {
+    const { baby_id } = req.params;
     const {
-        baby_id,
-        log_date,
         tempurature,
         sleep,
         image_urls,
@@ -17,9 +16,9 @@ const createHealthLog = async (req, res) => {
     const parentId = req.user ? req.user.parent_id : null;
 
     try {
-        if (!baby_id || !log_date || tempurature === undefined || sleep === undefined) {
+        if (!baby_id || tempurature === undefined || sleep === undefined) {
             return res.status(400).json({
-                message: 'baby_id, log_date, tempurature, and sleep are required',
+                message: 'baby_id param, tempurature, and sleep are required',
             });
         }
 
@@ -40,7 +39,7 @@ const createHealthLog = async (req, res) => {
 
         const log = await healthLogService.createHealthLog({
             baby_id,
-            log_date,
+            log_date: new Date(),
             tempurature,
             sleep,
             image_urls,
