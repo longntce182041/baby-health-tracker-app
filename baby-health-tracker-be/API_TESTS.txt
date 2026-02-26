@@ -102,3 +102,10 @@ POST /growth-records
   "height": 63.4,
   "record_date": "2026-02-15T00:00:00.000Z"
 }
+
+16) View growth chart (auth required, parent role)
+GET /growth-records?baby_id=65c9b8f2a2f1b6a9b9e1c123
+
+17) Compare growth with standard (auth required, parent role)
+GET /growth-records/compare?baby_id=65c9b8f2a2f1b6a9b9e1c123
+GET /growth-records/compare?baby_id=65c9b8f2a2f1b6a9b9e1c123&record_id=65ca9cf7d4f0b8a317a23abc

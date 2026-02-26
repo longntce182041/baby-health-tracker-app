@@ -23,6 +23,8 @@ router.post('/babies/share', authenticateToken, requireParent, babyController.sh
 router.post('/babies/:id/notes', authenticateToken, requireParent, babyController.addBabyNote);
 
 router.post('/growth-records', authenticateToken, requireParent, growthController.addGrowthRecord);
+router.get('/growth-records', authenticateToken, requireParent, growthController.listGrowthChart);
+router.get('/growth-records/compare', authenticateToken, requireParent, growthController.compareGrowthStandard);
 
 router.post('/health-logs', authenticateToken, requireParent, healthLogController.createHealthLog);
 router.get('/health-logs', authenticateToken, requireParent, healthLogController.listHealthLogs);
