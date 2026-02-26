@@ -55,6 +55,8 @@ router.patch('/vaccination-schedules/:id/complete', authenticateToken, requirePa
 router.get('/vaccination-schedules/:id/notes', authenticateToken, requireParent, vaccinationScheduleController.viewVaccinationNotesList);
 
 router.get('/notifications/reminders', authenticateToken, requireParent, notificationController.listVaccinationReminders);
+router.get('/notifications/system', authenticateToken, requireParent, notificationController.listSystemNotifications);
+router.get('/notifications/:id', authenticateToken, requireParent, notificationController.getNotificationDetail);
 
 router.post('/health-logs/:baby_id', authenticateToken, requireParent, healthLogController.createHealthLog);
 router.get('/health-logs', authenticateToken, requireParent, healthLogController.listHealthLogs);

@@ -317,4 +317,10 @@ GET /notifications/reminders
 44) View appointment details (auth required, parent role)
 GET /vaccination-schedules/:id
 
+45) Receive system notification (auth required, parent role)
+GET /notifications/system
+
+46) View notification detail (auth required, parent role)
+GET /notifications/:id
+
 
