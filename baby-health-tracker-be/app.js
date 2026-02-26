@@ -4,15 +4,42 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors');
+var bcrypt = require('bcryptjs');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var apiRouter = require('./routes/api');
 var connectDB = require('./configs/MongoDBConfig');
+var accountService = require('./services/accountService');
 
 var app = express();
 
-connectDB();
+const ensureAdminAccount = async () => {
+  const email = 'admin@example.com';
+  const password = '123456';
+
+  try {
+    const existing = await accountService.findAccountByEmail(email);
+    if (existing) {
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await accountService.createAccount({
+      email,
+      password: hashedPassword,
+      role: 'admin',
+      is_verified: true,
+    });
+
+    console.log('Admin account created');
+  } catch (error) {
+    console.error('Admin account seed error:', error.message);
+  }
+};
+
+connectDB()
+  .then(() => ensureAdminAccount());
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

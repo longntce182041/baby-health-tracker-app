@@ -162,6 +162,7 @@ POST /doctors
   "password": "123456",
   "phone": "0901234567",
   "full_name": "Dr. Nguyen Van B",
+  "specialty": "Pediatrics",
   "avatar_url": "https://example.com/doctor.png",
   "experience": [
     {
@@ -192,7 +193,7 @@ Note: This API creates both doctor profile and doctor account (role = doctor).
   28) View consultation doctor list (auth required, parent role)
   GET /consultation-doctors
 
-  29) Chat with doctor - send message (auth required, parent role)
+  29) Chat with doctor - parent send message (auth required, parent role)
   POST /conversations/send
   {
     "doctor_id": "<doctor_id>",
@@ -200,7 +201,120 @@ Note: This API creates both doctor profile and doctor account (role = doctor).
     "content": "Hello doctor, I have a question about my baby."
   }
 
-  30) Chat with doctor - view conversation (auth required, parent role)
+  30) Chat with doctor - doctor send message (auth required, doctor role)
+  POST /doctor/conversations/send
+  {
+    "parent_id": "<parent_id>",
+    "baby_id": "<baby_id>",
+    "content": "Hello, I am reviewing your baby's case."
+  }
+
+  31) Chat with doctor - view conversation (auth required, parent role)
   GET /conversations?doctor_id=<doctor_id>&baby_id=<baby_id>
+
+32) Doctor register weekly schedule (auth required, doctor role)
+POST /doctor/schedules/week
+{
+  "week_start": "2026-03-04T00:00:00.000Z", // optional, for client reference
+  "days": [
+    {
+      "date": "2026-03-04T00:00:00.000Z",
+      "note": "Morning only",
+      "slots": [
+        { "start_time": "08:00", "end_time": "09:00" },
+        { "start_time": "09:00", "end_time": "10:00" }
+      ]
+    },
+    {
+      "date": "2026-03-05T00:00:00.000Z",
+      "note": "Afternoon",
+      "slots": [
+        { "start_time": "14:00", "end_time": "16:00" }
+      ]
+    }
+  ]
+}
+
+33) Add vaccine (auth required, admin role)
+POST /vaccinations
+{
+  "vaccine_name": "MMR",
+  "dose_number": 1,
+  "price": 250000,
+  "location": [
+    {
+      "branch_name": "Central Clinic",
+      "address": "123 Nguyen Trai, District 1"
+    },
+    {
+      "branch_name": "East Clinic",
+      "address": "456 Le Loi, District 2"
+    }
+  ]
+}
+
+34) Update vaccine locations (auth required, admin role)
+PATCH /vaccinations/:id/locations
+{
+  "add": [
+    {
+      "branch_name": "West Clinic",
+      "address": "789 Tran Hung Dao, District 5"
+    }
+  ],
+  "remove_ids": ["<location_id>"]
+}
+
+35) View vaccine list (auth required, parent role)
+GET /vaccinations
+
+36) View vaccination clinics by vaccine (auth required, parent role)
+GET /vaccinations/:id/locations
+
+37) Book vaccination appointment (auth required, parent role)
+POST /vaccination-schedules
+{
+  "baby_id": "<baby_id>",
+  "vaccine_id": "<vaccine_id>",
+  "injection_date": "2026-03-15T00:00:00.000Z",
+  "location": {
+    "branch_name": "Central Clinic",
+    "address": "123 Nguyen Trai, District 1"
+  },
+  "notes": [
+    { "content": "Baby had mild fever last time" }
+  ]
+}
+
+38) View vaccination schedule (auth required, parent role)
+GET /vaccination-schedules?baby_id=<baby_id>
+
+39) View vaccination record details (auth required, parent role)
+GET /vaccination-schedules/:id
+
+40) Update vaccination record (auth required, parent role)
+PUT /vaccination-schedules/:id
+{
+  "injection_date": "2026-03-20T00:00:00.000Z",
+  "location": {
+    "branch_name": "East Clinic",
+    "address": "456 Le Loi, District 2"
+  },
+  "notes": [
+    { "content": "Rescheduled" }
+  ]
+}
+
+41) Mark vaccination completed (auth required, parent role)
+PATCH /vaccination-schedules/:id/complete
+
+42) View vaccination notes list (auth required, parent role)
+GET /vaccination-schedules/:id/notes
+
+43) Vaccination reminder list (auth required, parent role)
+GET /notifications/reminders
+
+44) View appointment details (auth required, parent role)
+GET /vaccination-schedules/:id
 
 
