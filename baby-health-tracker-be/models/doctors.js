@@ -5,6 +5,7 @@ const Schema = mongoose.Schema;
 const doctorsSchema = new Schema({
     full_name: { type: String, },
     avatar_url: { type: String, },
+    specialty: { type: String, },
     created_at: { type: Date, default: Date.now },
     experience: [
         {
