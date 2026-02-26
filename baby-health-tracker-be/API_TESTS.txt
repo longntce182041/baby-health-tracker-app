@@ -154,3 +154,53 @@ PUT /health-logs/:id
 
 23) Delete health diary (auth required, parent role)
 DELETE /health-logs/:id
+
+24) Add doctor
+POST /doctors
+{
+  "email": "doctor1@example.com",
+  "password": "123456",
+  "phone": "0901234567",
+  "full_name": "Dr. Nguyen Van B",
+  "avatar_url": "https://example.com/doctor.png",
+  "experience": [
+    {
+      "certificate_name": "Pediatrics Specialist",
+      "certificate_url": "https://example.com/certificates/pediatrics.pdf"
+    }
+  ]
+}
+Note: This API creates both doctor profile and doctor account (role = doctor).
+
+  25) Search doctors by specialty (auth required, parent role)
+  GET /doctors?specialty=Pediatrics
+
+  26) View doctor details (auth required, parent role)
+  GET /doctors/:id
+
+  27) Schedule consultation (auth required, parent role)
+  POST /consultations
+  {
+    "doctor_id": "<doctor_id>",
+    "baby_id": "<baby_id>",
+    "date": "2026-03-01T00:00:00.000Z",
+    "start_time": "08:00",
+    "end_time": "09:00",
+    "notes": "Short description of the issue"
+  }
+
+  28) View consultation doctor list (auth required, parent role)
+  GET /consultation-doctors
+
+  29) Chat with doctor - send message (auth required, parent role)
+  POST /conversations/send
+  {
+    "doctor_id": "<doctor_id>",
+    "baby_id": "<baby_id>",
+    "content": "Hello doctor, I have a question about my baby."
+  }
+
+  30) Chat with doctor - view conversation (auth required, parent role)
+  GET /conversations?doctor_id=<doctor_id>&baby_id=<baby_id>
+
+
