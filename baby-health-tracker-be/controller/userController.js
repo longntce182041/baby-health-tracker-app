@@ -17,10 +17,15 @@ const viewProfile = async (req, res) => {
         const profile = account.toObject();
         delete profile.password;
 
+        let parent = null;
         if (account.role === 'parent' && account.parent_id) {
-            const parent = await parentService.findParentById(account.parent_id);
+            parent = await parentService.findParentById(account.parent_id);
             profile.parent = parent || null;
         }
+
+        profile.phone = profile.phone || null;
+        profile.full_name = parent ? (parent.full_name || null) : null;
+        profile.avatar_url = parent ? (parent.avatar_url || null) : null;
 
         res.status(200).json({ message: 'Profile fetched', data: profile });
     } catch (error) {
@@ -36,39 +41,50 @@ const updateProfile = async (req, res) => {
         }
 
         const { phone, full_name, avatar_url } = req.body;
+        const account = await accountService.findAccountById(accountId);
+        if (!account) {
+            return res.status(404).json({ message: 'Account not found' });
+        }
+
         const accountUpdates = {};
+        const parentUpdates = {};
 
         if (phone !== undefined) {
             accountUpdates.phone = phone;
         }
+        if (full_name !== undefined) {
+            parentUpdates.full_name = full_name;
+        }
+        if (avatar_url !== undefined) {
+            parentUpdates.avatar_url = avatar_url;
+        }
 
-        let updatedAccount = null;
+        const updateTasks = [];
         if (Object.keys(accountUpdates).length > 0) {
-            updatedAccount = await accountService.updateAccountById(accountId, accountUpdates);
-        } else {
-            updatedAccount = await accountService.findAccountById(accountId);
+            updateTasks.push(accountService.updateAccountById(accountId, accountUpdates));
         }
 
-        if (!updatedAccount) {
-            return res.status(404).json({ message: 'Account not found' });
+        if (account.role === 'parent' && account.parent_id && Object.keys(parentUpdates).length > 0) {
+            updateTasks.push(parentService.updateParentById(account.parent_id, parentUpdates));
         }
 
-        if (updatedAccount.role === 'parent' && updatedAccount.parent_id) {
-            const parentUpdates = {};
-            if (full_name !== undefined) parentUpdates.full_name = full_name;
-            if (avatar_url !== undefined) parentUpdates.avatar_url = avatar_url;
-
-            if (Object.keys(parentUpdates).length > 0) {
-                await parentService.updateParentById(updatedAccount.parent_id, parentUpdates);
-            }
+        if (updateTasks.length > 0) {
+            await Promise.all(updateTasks);
         }
 
+        const updatedAccount = await accountService.findAccountById(accountId);
         const profile = updatedAccount.toObject();
         delete profile.password;
 
+        let parent = null;
         if (updatedAccount.role === 'parent' && updatedAccount.parent_id) {
-            profile.parent = await parentService.findParentById(updatedAccount.parent_id);
+            parent = await parentService.findParentById(updatedAccount.parent_id);
+            profile.parent = parent;
         }
+
+        profile.phone = profile.phone || null;
+        profile.full_name = parent ? (parent.full_name || null) : null;
+        profile.avatar_url = parent ? (parent.avatar_url || null) : null;
 
         res.status(200).json({ message: 'Profile updated', data: profile });
     } catch (error) {
