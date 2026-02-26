@@ -11,7 +11,22 @@ const findAvailableSchedules = async () => {
     }).populate('doctor_id');
 };
 
+const upsertScheduleForDate = async (doctorId, date, slots, note, status = 'available') => {
+    return await DoctorSchedule.findOneAndUpdate(
+        { doctor_id: doctorId, date },
+        {
+            doctor_id: doctorId,
+            date,
+            slots,
+            note,
+            status,
+        },
+        { new: true, upsert: true }
+    );
+};
+
 module.exports = {
     findScheduleByDoctorAndDate,
     findAvailableSchedules,
+    upsertScheduleForDate,
 };

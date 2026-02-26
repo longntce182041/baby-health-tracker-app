@@ -27,7 +27,25 @@ const requireParent = (req, res, next) => {
     return next();
 };
 
+const requireDoctor = (req, res, next) => {
+    if (!req.user || req.user.role !== 'doctor') {
+        return res.status(403).json({ message: 'Doctor role required' });
+    }
+
+    return next();
+};
+
+const requireAdmin = (req, res, next) => {
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin role required' });
+    }
+
+    return next();
+};
+
 module.exports = {
     authenticateToken,
     requireParent,
+    requireDoctor,
+    requireAdmin,
 };
