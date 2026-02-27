@@ -1,59 +1,88 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, isAuthenticated, logout as logoutService } from '../api/authApi';
-import { getProfile } from '../api/userApi';
-import { setItem } from '../storage';
+import React, { createContext, useState, useContext, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as authApi from "../api/authApi";
+import { setOnUnauthorized } from "../api/api";
+import { navigationRef } from "../navigation/navigationRef";
 
-const AuthContext = createContext(null);
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
-};
+const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Setup unauthorized handler
   useEffect(() => {
-    (async () => {
-      try {
-        if (await isAuthenticated()) {
-          const u = await getCurrentUser();
-          let merged = u || null;
-          try {
-            const profileRes = await getProfile();
-            if (profileRes?.success && profileRes?.data) {
-              merged = { ...(u || {}), ...profileRes.data };
-            }
-          } catch (e) {
-          }
-          if (merged) {
-            setUser(merged);
-          }
-        }
-      } catch (e) {}
-      setLoading(false);
-    })();
+    setOnUnauthorized(() => {
+      setUser(null);
+      setIsLoggedIn(false);
+      navigationRef.navigate("Login");
+    });
   }, []);
 
-  const login = (userData) => setUser(userData);
+  // Kiểm tra token khi app khởi động
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem("authToken");
+        if (token) {
+          const response = await authApi.getProfile();
+          setUser(response.data);
+          setIsLoggedIn(true);
+        }
+      } catch (error) {
+        console.error("Token check failed:", error);
+        await AsyncStorage.removeItem("authToken");
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkToken();
+  }, []);
 
-  const logout = async () => {
-    await logoutService();
-    setUser(null);
+  const login = async (email, password) => {
+    try {
+      const response = await authApi.loginParent(email, password);
+      const { token } = response.data;
+      await AsyncStorage.setItem("authToken", token);
+      const profileResponse = await authApi.getProfile();
+      setUser(profileResponse.data);
+      setIsLoggedIn(true);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   };
 
-  const updateUser = async (userData) => {
-    setUser(userData);
-    await setItem('user', JSON.stringify(userData));
+  const register = async (email, password) => {
+    try {
+      const response = await authApi.registerParent(email, password);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const logout = async () => {
+    await AsyncStorage.removeItem("authToken");
+    setUser(null);
+    setIsLoggedIn(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, isLoggedIn: !!user, login, logout, updateUser }}>
+    <AuthContext.Provider
+      value={{
+        isLoggedIn,
+        user,
+        loading,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export default AuthContext;
+export const useAuth = () => useContext(AuthContext);

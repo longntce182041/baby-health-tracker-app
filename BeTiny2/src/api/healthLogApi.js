@@ -1,23 +1,17 @@
-import api from './api';
-import { MOCK_HEALTH_LOG_GROUPS } from '../data/mockHealthLogs';
+import api from "./api";
 
-export const getHealthLogs = async (babyId, params = {}) => {
-  try {
-    const res = await api.get(`/babies/${babyId}/health-logs`, { params });
-    return res.data;
-  } catch (error) {
-    console.warn('getHealthLogs error, dùng mock:', error?.message || error);
-    return { success: true, data: MOCK_HEALTH_LOG_GROUPS };
-  }
+export const createHealthLog = (babyId, data) => {
+  return api.post(`/health-logs/${babyId}`, data);
 };
 
-export const createHealthLog = async (babyId, data) => {
-  try {
-    const res = await api.post(`/babies/${babyId}/health-logs`, data);
-    return res.data;
-  } catch (error) {
-    console.warn('createHealthLog error:', error?.message || error);
-    return error.response?.data || { success: false, message: error?.message || 'Không thể lưu nhật ký' };
-  }
+export const getHealthLogs = (babyId) => {
+  return api.get(`/health-logs?baby_id=${babyId}`);
 };
 
+export const updateHealthLog = (logId, data) => {
+  return api.put(`/health-logs/${logId}`, data);
+};
+
+export const deleteHealthLog = (logId) => {
+  return api.delete(`/health-logs/${logId}`);
+};

@@ -1,23 +1,21 @@
-import api from './api';
-import { MOCK_GROWTH_RECORDS } from '../data/babyDetailMock';
+import api from "./api";
 
-export const getGrowthRecords = async (babyId, params = {}) => {
-  try {
-    const res = await api.get(`/babies/${babyId}/growth-records`, { params });
-    return res.data;
-  } catch (error) {
-    console.warn('getGrowthRecords error, dùng mock:', error?.message || error);
-    return { success: true, data: MOCK_GROWTH_RECORDS };
-  }
+export const getGrowthRecords = (babyId) => {
+  return api.get(`/growth-records?baby_id=${babyId}`);
 };
 
-export const createGrowthRecord = async (babyId, data) => {
-  try {
-    const res = await api.post(`/babies/${babyId}/growth-records`, data);
-    return res.data;
-  } catch (error) {
-    console.warn('createGrowthRecord error:', error?.message || error);
-    return error.response?.data || { success: false, message: error?.message || 'Không thể lưu số đo' };
-  }
+export const createGrowthRecord = (babyId, data) => {
+  return api.post(`/growth-records/${babyId}`, {
+    weight: data.weight,
+    height: data.height,
+    head_size: data.head_size || data.head_circumference,
+    record_date: data.recorded_at || new Date().toISOString(),
+  });
 };
 
+export const compareGrowthWithStandard = (babyId, recordId = null) => {
+  const url = recordId
+    ? `/growth-records/compare?baby_id=${babyId}&record_id=${recordId}`
+    : `/growth-records/compare?baby_id=${babyId}`;
+  return api.get(url);
+};

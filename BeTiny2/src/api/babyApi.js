@@ -1,53 +1,33 @@
-import api from './api';
-import { MOCK_BABIES } from '../data/mockBabies';
-import { getMockBabyById } from '../data/babyDetailMock';
+import api from "./api";
 
-export const getBabies = async () => {
-  try {
-    const res = await api.get('/babies');
-    return res.data;
-  } catch (error) {
-    console.warn('getBabies error, dùng dữ liệu mock:', error?.message || error);
-    return { success: true, data: MOCK_BABIES };
-  }
+export const getBabies = () => {
+  return api.get("/babies");
 };
 
-export const getBabyById = async (id) => {
-  try {
-    const res = await api.get(`/babies/${id}`);
-    return res.data;
-  } catch (error) {
-    console.warn('getBabyById error, dùng mock:', error?.message || error);
-    return { success: true, data: getMockBabyById(id) };
-  }
+export const getBabyDetail = (babyId) => {
+  return api.get(`/babies/${babyId}`);
 };
 
-export const createBaby = async (data) => {
-  try {
-    const res = await api.post('/babies', data);
-    return res.data;
-  } catch (error) {
-    console.warn('createBaby error:', error?.message || error);
-    return error.response?.data || { success: false, message: error?.message || 'Không thể thêm bé' };
-  }
+export const addBaby = (babyData) => {
+  return api.post("/babies", babyData);
 };
 
-export const updateBaby = async (id, data) => {
-  try {
-    const res = await api.put(`/babies/${id}`, data);
-    return res.data;
-  } catch (error) {
-    console.warn('updateBaby error:', error?.message || error);
-    return error.response?.data || { success: false, message: error?.message || 'Không thể cập nhật' };
-  }
+export const updateBaby = (babyId, babyData) => {
+  return api.put(`/babies/${babyId}`, babyData);
 };
 
-export const deleteBaby = async (id) => {
-  try {
-    const res = await api.delete(`/babies/${id}`);
-    return res.data;
-  } catch (error) {
-    console.warn('deleteBaby error:', error?.message || error);
-    return error.response?.data || { success: false, message: error?.message || 'Không thể xóa' };
-  }
+export const deleteBaby = (babyId) => {
+  return api.delete(`/babies/${babyId}`);
+};
+
+export const addBabyNote = (babyId, note) => {
+  return api.post(`/babies/${babyId}/notes`, { content: note });
+};
+
+export const getBabyByShareCode = (code) => {
+  return api.get(`/babies/share?code=${code}`);
+};
+
+export const shareBabyToParent = (code) => {
+  return api.post("/babies/share", { code });
 };

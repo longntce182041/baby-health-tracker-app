@@ -1,65 +1,48 @@
-import axios from 'axios';
-import { getItem, setItem, removeItem } from '../storage';
+import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+// Thay đổi URL theo môi trường
+const API_URL = "http://10.66.168.47:3000/api"; // Hoặc IP server thực tế
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: { 'Content-Type': 'application/json' },
+  timeout: 10000,
 });
 
-let onUnauthorized = () => {};
-export const setOnUnauthorized = (fn) => {
-  onUnauthorized = fn || (() => {});
+// Callback để xử lý unauthorized
+let onUnauthorizedCallback = null;
+
+export const setOnUnauthorized = (callback) => {
+  onUnauthorizedCallback = callback;
 };
 
+// Interceptor request - thêm token
 api.interceptors.request.use(
   async (config) => {
-    const token = await getItem('accessToken');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+    const token = await AsyncStorage.getItem("authToken");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
+// Interceptor response - xử lý lỗi
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-    const isAuthEndpoint =
-      originalRequest?.url?.includes('/auth/login') ||
-      originalRequest?.url?.includes('/auth/register') ||
-      originalRequest?.url?.includes('/auth/refresh-token');
+    if (error.response?.status === 401) {
+      // Token hết hạn hoặc không hợp lệ
+      await AsyncStorage.removeItem("authToken");
 
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
-      originalRequest._retry = true;
-      const refreshToken = await getItem('refreshToken');
-      if (!refreshToken) {
-        await removeItem('accessToken');
-        await removeItem('refreshToken');
-        await removeItem('user');
-        setTimeout(() => onUnauthorized(), 0);
-        return Promise.reject(error);
-      }
-      try {
-        const res = await axios.post(`${API_URL}/auth/refresh-token`, { refreshToken });
-        if (res.data?.success) {
-          const { accessToken, refreshToken: newRt } = res.data.data;
-          await setItem('accessToken', accessToken);
-          await setItem('refreshToken', newRt);
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return api(originalRequest);
-        }
-      } catch (e) {
-        await removeItem('accessToken');
-        await removeItem('refreshToken');
-        await removeItem('user');
-        setTimeout(() => onUnauthorized(), 0);
-        return Promise.reject(e);
+      // Gọi callback để navigate về login
+      if (onUnauthorizedCallback) {
+        onUnauthorizedCallback();
       }
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

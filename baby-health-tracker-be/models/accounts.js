@@ -1,17 +1,17 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const accountsSchema = new Schema({
-    parent_id: { type: Schema.Types.ObjectId, ref: 'Parents' },
-    doctor_id: { type: Schema.Types.ObjectId, ref: 'Doctors' },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    phone: { type: String },
-    status: { type: Boolean, default: true },
-    role: { type: String, enum: ['doctor', 'parent', 'admin'], required: true },
-    is_verified: { type: Boolean, default: false },
-    created_at: { type: Date, default: Date.now },
+  parent_id: { type: Schema.Types.ObjectId, ref: "Parents" },
+  doctor_id: { type: Schema.Types.ObjectId, ref: "Doctors" },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  phone: { type: String, sparse: true, default: null },
+  status: { type: Boolean, default: true },
+  role: { type: String, enum: ["doctor", "parent", "admin"], required: true },
+  is_verified: { type: Boolean, default: false },
+  created_at: { type: Date, default: Date.now },
 });
 
-const Accounts = mongoose.model('Accounts', accountsSchema);
+const Accounts = mongoose.model("Accounts", accountsSchema);
 module.exports = Accounts;
