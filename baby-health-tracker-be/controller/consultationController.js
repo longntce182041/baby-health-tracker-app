@@ -2,6 +2,7 @@ const babyService = require('../services/babyService');
 const doctorService = require('../services/doctorService');
 const doctorScheduleService = require('../services/doctorScheduleService');
 const consultationService = require('../services/consultationService');
+const conversationService = require('../services/conversationService');
 
 const scheduleConsultation = async (req, res) => {
     const { doctor_id, baby_id, date, start_time, end_time, notes } = req.body;
@@ -53,12 +54,22 @@ const scheduleConsultation = async (req, res) => {
             return res.status(404).json({ message: 'Time slot not found for this date' });
         }
 
-        if (schedule.slots[slotIndex].is_booked) {
-            return res.status(400).json({ message: 'Time slot is already booked' });
+        // Check if slot already has 3 patients booked
+        const slot = schedule.slots[slotIndex];
+        if (slot.patient_ids && slot.patient_ids.length >= 3) {
+            return res.status(400).json({ message: 'Time slot is fully booked (maximum 3 patients per slot)' });
         }
 
-        schedule.slots[slotIndex].is_booked = true;
-        schedule.slots[slotIndex].patient_id = parentId;
+        // Check if parent already booked this slot
+        if (slot.patient_ids && slot.patient_ids.some((id) => id.toString() === parentId.toString())) {
+            return res.status(400).json({ message: 'You have already booked this time slot' });
+        }
+
+        // Add parent to patient_ids array
+        if (!schedule.slots[slotIndex].patient_ids) {
+            schedule.slots[slotIndex].patient_ids = [];
+        }
+        schedule.slots[slotIndex].patient_ids.push(parentId);
         await schedule.save();
 
         const consultationTime = new Date(scheduleDate);
@@ -77,6 +88,24 @@ const scheduleConsultation = async (req, res) => {
             consultation_time: consultationTime,
             notes,
         });
+
+        // Create conversation and add initial message from parent with notes
+        const conversation = await conversationService.createConversationWithConsultation(
+            parentId,
+            doctor_id,
+            baby_id,
+            consultation._id
+        );
+
+        // Add initial message with notes as first message
+        if (notes) {
+            await conversationService.addMessageToConversation(conversation._id, {
+                sender: 'parent',
+                content: notes,
+                status: 'sent',
+                timestamp: new Date(),
+            });
+        }
 
         return res.status(201).json({ message: 'Consultation scheduled successfully', data: consultation });
     } catch (error) {

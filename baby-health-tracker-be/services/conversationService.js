@@ -21,6 +21,33 @@ const findOrCreateConversation = async (parentId, doctorId, babyId) => {
     return conversation;
 };
 
+const createConversationWithConsultation = async (parentId, doctorId, babyId, consultationId) => {
+    const conversation = new Conversation({
+        parent_id: parentId,
+        doctor_id: doctorId,
+        baby_id: babyId,
+        consultation_id: consultationId,
+        messages: [],
+        status: true,
+    });
+    return await conversation.save();
+};
+
+const findConversationById = async (conversationId) => {
+    return await Conversation.findById(conversationId);
+};
+
+const findConversationByconsultationId = async (consultationId) => {
+    return await Conversation.findOne({ consultation_id: consultationId });
+};
+
+const findConversationByParentAndDoctor = async (parentId, doctorId) => {
+    return await Conversation.findOne({
+        parent_id: parentId,
+        doctor_id: doctorId,
+    });
+};
+
 const addMessageToConversation = async (conversationId, message) => {
     return await Conversation.findByIdAndUpdate(
         conversationId,
@@ -31,5 +58,9 @@ const addMessageToConversation = async (conversationId, message) => {
 
 module.exports = {
     findOrCreateConversation,
+    createConversationWithConsultation,
+    findConversationById,
+    findConversationByconsultationId,
+    findConversationByParentAndDoctor,
     addMessageToConversation,
 };
