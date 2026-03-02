@@ -42,10 +42,10 @@ POST /reset-password
 }
 
 6) View profile (auth required)
-GET /me
+GET /profile
 
 7) Update profile (auth required)
-PUT /me
+PUT /profile
 {
   "phone": "0901234567",
   "full_name": "Nguyen Van A",
@@ -53,7 +53,7 @@ PUT /me
 }
 
 8) Change password (auth required)
-PUT /me/password
+PUT /profile/password
 {
   "current_password": "P@ssw0rd123",
   "new_password": "NewP@ssw0rd123"
@@ -162,7 +162,6 @@ POST /doctors
   "password": "123456",
   "phone": "0901234567",
   "full_name": "Dr. Nguyen Van B",
-  "specialty": "Pediatrics",
   "avatar_url": "https://example.com/doctor.png",
   "experience": [
     {
@@ -172,6 +171,40 @@ POST /doctors
   ]
 }
 Note: This API creates both doctor profile and doctor account (role = doctor).
+
+  24.5) Register doctor weekly schedule (auth required, doctor role)
+  POST /doctor/schedules/week
+  {
+    "week_start": "2026-03-01T00:00:00.000Z",
+    "days": [
+      {
+        "date": "2026-03-02T00:00:00.000Z",
+        "slots": [
+          {
+            "start_time": "08:00",
+            "end_time": "09:00"
+          },
+          {
+            "start_time": "09:00",
+            "end_time": "10:00"
+          }
+        ],
+        "note": "Available for consultation"
+      },
+      {
+        "date": "2026-03-03T00:00:00.000Z",
+        "slots": [
+          {
+            "start_time": "14:00",
+            "end_time": "15:00"
+          }
+        ],
+        "note": ""
+      }
+    ]
+  }
+  Note: Doctor registers their available time slots for the week.
+        Each day can have multiple time slots with different start/end times.
 
   25) Search doctors by specialty (auth required, parent role)
   GET /doctors?specialty=Pediatrics
@@ -189,138 +222,138 @@ Note: This API creates both doctor profile and doctor account (role = doctor).
     "end_time": "09:00",
     "notes": "Short description of the issue"
   }
+  Note: A conversation will be automatically created between parent and doctor.
+  The notes will be sent as the first message from parent to doctor.
+  Maximum 3 patients can be booked for the same time slot.
+  Error if slot is fully booked or parent already has a booking for that slot.
 
   28) View consultation doctor list (auth required, parent role)
   GET /consultation-doctors
 
-  29) Chat with doctor - parent send message (auth required, parent role)
-  POST /conversations/send
+  28.5) View doctor schedule (auth required, parent role)
+  GET /doctors/{doctor_id}/schedule
+  GET /doctors/{doctor_id}/schedule?from_date=2026-03-01T00:00:00.000Z&to_date=2026-03-31T23:59:59.999Z
+
+  Parameters:
+  - doctor_id: (required) Doctor's ID
+  - from_date: (optional) Start date for schedule range (default: today)
+  - to_date: (optional) End date for schedule range (default: 30 days from today)
+
+  Response:
   {
-    "doctor_id": "<doctor_id>",
-    "baby_id": "<baby_id>",
+    "message": "Doctor schedule fetched",
+    "doctor": {
+      "_id": "<doctor_id>",
+      "full_name": "Dr. Nguyen Van B",
+      "specialty": "Pediatrics"
+    },
+    "data": [
+      {
+        "date": "2026-03-02T00:00:00.000Z",
+        "status": "available",
+        "note": "Available for consultation",
+        "slots": [
+          {
+            "start_time": "08:00",
+            "end_time": "09:00",
+            "booked_count": 2,
+            "available_slots": 1,
+            "is_fully_booked": false,
+            "is_user_booked": false
+          },
+          {
+            "start_time": "09:00",
+            "end_time": "10:00",
+            "booked_count": 3,
+            "available_slots": 0,
+            "is_fully_booked": true,
+            "is_user_booked": true
+          }
+        ]
+      },
+      {
+        "date": "2026-03-03T00:00:00.000Z",
+        "status": "available",
+        "note": "",
+        "slots": [
+          {
+            "start_time": "14:00",
+            "end_time": "15:00",
+            "booked_count": 0,
+            "available_slots": 3,
+            "is_fully_booked": false,
+            "is_user_booked": false
+          }
+        ]
+      }
+    ]
+  }
+
+  Note: Each time slot can accommodate a maximum of 3 patients.
+        - booked_count: Number of patients already booked for this slot
+        - available_slots: Number of remaining slots (max 3)
+        - is_fully_booked: True if slot already has 3 patients
+        - is_user_booked: True if the current user is already booked for this slot
+
+  29) Chat with doctor - send message (auth required, parent or doctor role)
+  POST /conversations/send
+
+  If Parent (use consultation_id or doctor_id):
+  {
+    "consultation_id": "<consultation_id>",
     "content": "Hello doctor, I have a question about my baby."
   }
 
-  30) Chat with doctor - doctor send message (auth required, doctor role)
-  POST /doctor/conversations/send
+  If Doctor (use consultation_id or parent_id):
   {
-    "parent_id": "<parent_id>",
-    "baby_id": "<baby_id>",
-    "content": "Hello, I am reviewing your baby's case."
+    "consultation_id": "<consultation_id>",
+    "content": "Hi, I received your message. Let me help you."
   }
 
-  31) Chat with doctor - view conversation (auth required, parent role)
-  GET /conversations?doctor_id=<doctor_id>&baby_id=<baby_id>
+  Note: baby_id is no longer required. It is automatically retrieved from conversation/consultation.
+        consultation_id is recommended for accurate conversation lookup.
 
-32) Doctor register weekly schedule (auth required, doctor role)
-POST /doctor/schedules/week
-{
-  "week_start": "2026-03-04T00:00:00.000Z", // optional, for client reference
-  "days": [
-    {
-      "date": "2026-03-04T00:00:00.000Z",
-      "note": "Morning only",
-      "slots": [
-        { "start_time": "08:00", "end_time": "09:00" },
-        { "start_time": "09:00", "end_time": "10:00" }
-      ]
-    },
-    {
-      "date": "2026-03-05T00:00:00.000Z",
-      "note": "Afternoon",
-      "slots": [
-        { "start_time": "14:00", "end_time": "16:00" }
-      ]
-    }
-  ]
-}
+  30) Chat with doctor - view conversation (auth required, parent or doctor role)
+  GET /conversations?consultation_id=<consultation_id>
+  OR
+  GET /conversations?doctor_id=<doctor_id>
 
-33) Add vaccine (auth required, admin role)
-POST /vaccinations
-{
-  "vaccine_name": "MMR",
-  "dose_number": 1,
-  "price": 250000,
-  "location": [
-    {
-      "branch_name": "Central Clinic",
-      "address": "123 Nguyen Trai, District 1"
-    },
-    {
-      "branch_name": "East Clinic",
-      "address": "456 Le Loi, District 2"
-    }
-  ]
-}
+  Note: consultation_id is recommended for accurate conversation lookup.
+        If using doctor_id, it will return the most recent conversation with that doctor.
 
-34) Update vaccine locations (auth required, admin role)
-PATCH /vaccinations/:id/locations
-{
-  "add": [
-    {
-      "branch_name": "West Clinic",
-      "address": "789 Tran Hung Dao, District 5"
-    }
-  ],
-  "remove_ids": ["<location_id>"]
-}
+  31) View doctor profile (auth required, parent role)
+  GET /doctors/:id
+  Note: This returns the doctor's profile information including experience and specialty.
 
-35) View vaccine list (auth required, parent role)
-GET /vaccinations
+  32) Update doctor profile (auth required, doctor role)
+  PUT /doctor/profile
+  {
+    "full_name": "Dr. Nguyen Van B Updated",
+    "avatar_url": "https://example.com/doctor-updated.png",
+    "specialty": "Pediatrics Specialist",
+    "experience": [
+      {
+        "certificate_name": "Pediatrics Specialist License",
+        "certificate_url": "https://example.com/certificates/pediatrics.pdf"
+      },
+      {
+        "certificate_name": "Advanced Child Care",
+        "certificate_url": "https://example.com/certificates/child-care.pdf"
+      }
+    ]
+  }
+  Note: Updates the authenticated doctor's profile. All fields are optional.
+  33) View parent profile with babies (auth required, parent role)
+  GET /profile/parent
+  Note: Returns parent profile with all associated babies information including:
+  - email, phone, full_name, avatar_url, wallet_points, and babies array
 
-36) View vaccination clinics by vaccine (auth required, parent role)
-GET /vaccinations/:id/locations
+  34) View doctor profile with certificates (auth required, doctor role)
+  GET /profile/doctor
+  Note: Returns doctor's own profile including:
+  - full_name, avatar_url, specialty, experience, email, phone, and all certificate details
 
-37) Book vaccination appointment (auth required, parent role)
-POST /vaccination-schedules
-{
-  "baby_id": "<baby_id>",
-  "vaccine_id": "<vaccine_id>",
-  "injection_date": "2026-03-15T00:00:00.000Z",
-  "location": {
-    "branch_name": "Central Clinic",
-    "address": "123 Nguyen Trai, District 1"
-  },
-  "notes": [
-    { "content": "Baby had mild fever last time" }
-  ]
-}
-
-38) View vaccination schedule (auth required, parent role)
-GET /vaccination-schedules?baby_id=<baby_id>
-
-39) View vaccination record details (auth required, parent role)
-GET /vaccination-schedules/:id
-
-40) Update vaccination record (auth required, parent role)
-PUT /vaccination-schedules/:id
-{
-  "injection_date": "2026-03-20T00:00:00.000Z",
-  "location": {
-    "branch_name": "East Clinic",
-    "address": "456 Le Loi, District 2"
-  },
-  "notes": [
-    { "content": "Rescheduled" }
-  ]
-}
-
-41) Mark vaccination completed (auth required, parent role)
-PATCH /vaccination-schedules/:id/complete
-
-42) View vaccination notes list (auth required, parent role)
-GET /vaccination-schedules/:id/notes
-
-43) Vaccination reminder list (auth required, parent role)
-GET /notifications/reminders
-
-44) View appointment details (auth required, parent role)
-GET /vaccination-schedules/:id
-
-45) Receive system notification (auth required, parent role)
-GET /notifications/system
-
-46) View notification detail (auth required, parent role)
-GET /notifications/:id
-
-
+  35) View doctor profile as parent (auth required, parent role)
+  GET /doctors/:id
+  Note: Returns doctor's public profile (name, avatar, specialty, experience) for viewing by parents
+  without sensitive information like email and phone.

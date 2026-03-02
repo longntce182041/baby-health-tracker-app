@@ -12,8 +12,7 @@ const doctorScheduleSchema = new Schema({
         {
             start_time: { type: String, required: true }, // "08:00"
             end_time: { type: String, required: true },   // "09:00"
-            is_booked: { type: Boolean, default: false },
-            patient_id: { type: Schema.Types.ObjectId, ref: 'Users', default: null }
+            patient_ids: [{ type: Schema.Types.ObjectId, ref: 'Parents' }], // Array of up to 3 patients
         }
     ],
 
