@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const accountService = require('../services/accountService');
 const parentService = require('../services/parentService');
+const babyService = require('../services/babyService');
 
 const viewProfile = async (req, res) => {
     try {
@@ -123,8 +124,52 @@ const changePassword = async (req, res) => {
     }
 };
 
+const viewParentProfile = async (req, res) => {
+    try {
+        const accountId = req.user ? req.user.account_id : null;
+        if (!accountId) {
+            return res.status(401).json({ message: 'Missing token' });
+        }
+
+        const account = await accountService.findAccountById(accountId);
+        if (!account) {
+            return res.status(404).json({ message: 'Account not found' });
+        }
+
+        if (account.role !== 'parent') {
+            return res.status(403).json({ message: 'Parent role required' });
+        }
+
+        const profile = account.toObject();
+        delete profile.password;
+
+        let parent = null;
+        if (account.parent_id) {
+            parent = await parentService.findParentById(account.parent_id);
+            profile.parent = parent || null;
+        }
+
+        // Fetch babies for this parent
+        let babies = [];
+        if (account.parent_id) {
+            babies = await babyService.listBabies(account.parent_id);
+        }
+
+        profile.phone = profile.phone || null;
+        profile.full_name = parent ? (parent.full_name || null) : null;
+        profile.avatar_url = parent ? (parent.avatar_url || null) : null;
+        profile.wallet_points = parent ? (parent.wallet_points || 0) : 0;
+        profile.babies = babies || [];
+
+        res.status(200).json({ message: 'Parent profile fetched', data: profile });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
     viewProfile,
     updateProfile,
     changePassword,
+    viewParentProfile,
 };

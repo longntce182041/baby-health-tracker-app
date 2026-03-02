@@ -4,10 +4,22 @@ const findScheduleByDoctorAndDate = async (doctorId, date) => {
     return await DoctorSchedule.findOne({ doctor_id: doctorId, date });
 };
 
+const findDoctorSchedules = async (doctorId, fromDate, toDate) => {
+    const query = { doctor_id: doctorId };
+
+    if (fromDate && toDate) {
+        query.date = {
+            $gte: new Date(fromDate),
+            $lte: new Date(toDate),
+        };
+    }
+
+    return await DoctorSchedule.find(query).sort({ date: 1 }).populate('doctor_id');
+};
+
 const findAvailableSchedules = async () => {
     return await DoctorSchedule.find({
         status: 'available',
-        'slots.is_booked': false,
     }).populate('doctor_id');
 };
 
@@ -27,6 +39,7 @@ const upsertScheduleForDate = async (doctorId, date, slots, note, status = 'avai
 
 module.exports = {
     findScheduleByDoctorAndDate,
+    findDoctorSchedules,
     findAvailableSchedules,
     upsertScheduleForDate,
 };

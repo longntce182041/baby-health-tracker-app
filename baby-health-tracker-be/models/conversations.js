@@ -5,6 +5,7 @@ const conversationsSchema = new Schema({
     baby_id: { type: Schema.Types.ObjectId, ref: 'Babies', required: true },
     doctor_id: { type: Schema.Types.ObjectId, ref: 'Doctors', required: true },
     parent_id: { type: Schema.Types.ObjectId, ref: 'Parents', required: true },
+    consultation_id: { type: Schema.Types.ObjectId, ref: 'Consultations' },
     messages: [
         {
             sender: { type: String, enum: ['doctor', 'parent'], required: true },
