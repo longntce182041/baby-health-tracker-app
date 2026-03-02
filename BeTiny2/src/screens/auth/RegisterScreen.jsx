@@ -10,6 +10,7 @@ import {
   ScrollView,
   Image,
   Platform,
+  navigation,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
@@ -118,22 +119,20 @@ export default function RegisterScreen({ navigation }) {
         phone: form.phone.trim(),
         password: form.password,
       });
-      if (res?.status === "success") {
-        Alert.alert("Thành công", res.message || "Đăng ký thành công");
-        navigation.navigate("VerifyOTP", {
-          email: form.email.trim(),
-          phone: form.phone.trim(),
-        });
-      } else {
-        Alert.alert("Lỗi", res?.message || "Đăng ký thất bại");
-      }
+      // API trả về res.data, nếu không throw error thì tức là thành công
+      setLoading(false);
+      navigation.navigate("VerifyOTP", {
+        email: form.email.trim(),
+      });
+      setTimeout(() => {
+        Alert.alert("Thành công", res?.message || "Đăng ký thành công");
+      }, 500);
     } catch (error) {
+      setLoading(false);
       Alert.alert(
         "Lỗi",
         error?.message || error?.response?.data?.message || "Đăng ký thất bại",
       );
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -367,7 +366,7 @@ export default function RegisterScreen({ navigation }) {
           activeOpacity={0.8}
         >
           {loading ? (
-            <ActivityIndicator color="#d80303" />
+            <ActivityIndicator color="#ffffff" />
           ) : (
             <Text style={styles.btnText}>Đăng Ký</Text>
           )}

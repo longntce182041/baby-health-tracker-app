@@ -7,15 +7,19 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  ActivityIndicator,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors, typography } from "../../theme";
 import { verifyOtp } from "../../api/authApi";
+import { useAuth } from "../../context/AuthContext";
 
 const OTP_LENGTH = 5;
 const RESEND_SECONDS = 30;
 
 export default function VerifyOTP({ route, navigation }) {
-  const { email = "", phone = "" } = route.params || {};
+  const { email = "" } = route.params || {};
+  const { setAuthUser } = useAuth();
   const inputsRef = useRef([]);
   const [digits, setDigits] = useState(Array(OTP_LENGTH).fill(""));
   const [counter, setCounter] = useState(RESEND_SECONDS);
@@ -54,11 +58,6 @@ export default function VerifyOTP({ route, navigation }) {
     next[idx] = val.slice(-1); // chỉ 1 ký tự
     setDigits(next);
     if (val && idx < OTP_LENGTH - 1) focusNext(idx);
-
-    const code = next.join("");
-    if (code.length === OTP_LENGTH && code.indexOf("") === -1) {
-      submit(code);
-    }
   };
 
   const handleKeyPress = ({ nativeEvent }, idx) => {
@@ -67,25 +66,47 @@ export default function VerifyOTP({ route, navigation }) {
     }
   };
 
-  const submit = async (code) => {
+  const submit = async (otp) => {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await verifyOtp(email, code); // backend: { email, otp }
-      if (res?.data?.success) {
-        Alert.alert("Thành công", "Xác thực OTP thành công!");
-        navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
-      } else {
-        Alert.alert("Lỗi", res?.data?.message || "OTP không hợp lệ");
+      const res = await verifyOtp(email, otp);
+      console.log("VerifyOTP response:", res);
+
+      // Nếu không throw error thì tức là thành công, token đã được lưu bởi verifyOtp
+      // API trả về: { data: { token, account_id, parent_id, role }, message }
+      if (res?.data?.token) {
+        const userData = {
+          account_id: res.data.account_id,
+          parent_id: res.data.parent_id,
+          role: res.data.role,
+          email: email,
+        };
+        console.log("Setting user after OTP:", userData);
+        setAuthUser(userData);
       }
+      navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+      setTimeout(() => {
+        Alert.alert("Thành công", res?.message || "Xác thực OTP thành công!");
+      }, 500);
     } catch (e) {
+      setLoading(false);
+      setDigits(Array(OTP_LENGTH).fill(""));
+      inputsRef.current[0]?.focus();
       Alert.alert(
         "Lỗi",
-        e?.response?.data?.message || e?.message || "OTP không hợp lệ",
+        e?.message || e?.response?.data?.message || "OTP không hợp lệ",
       );
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleSubmit = () => {
+    const code = digits.join("");
+    if (code.length !== OTP_LENGTH) {
+      Alert.alert("Lỗi", "Vui lòng nhập đủ 5 số mã OTP");
+      return;
+    }
+    submit(code);
   };
 
   const resend = () => {
@@ -98,55 +119,81 @@ export default function VerifyOTP({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.logoWrap}>
-        <Image
-          source={require("../../../assets/images/logoBeTiny.bmp")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text style={styles.brand}>Bé Tiny</Text>
-      </View>
-
-      <Text style={styles.title}>Kiểm tra tin nhắn của bạn</Text>
-      <Text style={styles.subtitle}>
-        Chúng tôi đã gửi mã xác thực đến sđt{"\n"}
-        {maskPhone(phone)}
-      </Text>
-
-      <View style={styles.otpRow}>
-        {digits.map((d, i) => (
-          <TextInput
-            key={i}
-            ref={(el) => (inputsRef.current[i] = el)}
-            style={styles.otpInput}
-            value={d}
-            onChangeText={(t) => handleChange(t, i)}
-            onKeyPress={(e) => handleKeyPress(e, i)}
-            keyboardType="number-pad"
-            maxLength={1}
-            textAlign="center"
-            selectionColor={colors.pinkAccent}
-            autoFocus={i === 0}
-          />
-        ))}
-      </View>
-
       <TouchableOpacity
-        onPress={resend}
-        disabled={counter > 0}
-        style={styles.resendWrap}
+        style={styles.backBtn}
+        onPress={() => navigation.goBack()}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
       >
-        <Text
-          style={[
-            styles.resendText,
-            counter > 0 && { color: colors.textMuted },
-          ]}
-        >
-          {counter > 0
-            ? `Gửi lại mã (00:${counter.toString().padStart(2, "0")})`
-            : "Gửi lại mã"}
-        </Text>
+        <Ionicons name="arrow-back" size={24} color={colors.text} />
       </TouchableOpacity>
+
+      <View style={styles.content}>
+        <View style={styles.logoWrap}>
+          <Image
+            source={require("../../../assets/images/logoBeTiny.bmp")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <Text style={styles.brand}>Bé Tiny</Text>
+        </View>
+
+        <Text style={styles.title}>Kiểm tra tin nhắn của bạn</Text>
+        <Text style={styles.subtitle}>
+          Chúng tôi đã gửi mã xác thực đến email{"\n"}
+          {email}
+        </Text>
+
+        <View style={styles.otpRow}>
+          {digits.map((d, i) => (
+            <TextInput
+              key={i}
+              ref={(el) => (inputsRef.current[i] = el)}
+              style={styles.otpInput}
+              value={d}
+              onChangeText={(t) => handleChange(t, i)}
+              onKeyPress={(e) => handleKeyPress(e, i)}
+              keyboardType="number-pad"
+              maxLength={1}
+              textAlign="center"
+              selectionColor={colors.pinkAccent}
+              autoFocus={i === 0}
+            />
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.submitBtn,
+            digits.join("").length !== OTP_LENGTH && styles.submitBtnDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={loading || digits.join("").length !== OTP_LENGTH}
+          activeOpacity={0.8}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.submitBtnText}>Xác nhận</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={resend}
+          disabled={counter > 0}
+          style={styles.resendWrap}
+        >
+          <Text
+            style={[
+              styles.resendText,
+              counter > 0 && { color: colors.textMuted },
+            ]}
+          >
+            {counter > 0
+              ? `Gửi lại mã (00:${counter.toString().padStart(2, "0")})`
+              : "Gửi lại mã"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -157,6 +204,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 24,
     paddingTop: 32,
+  },
+  backBtn: {
+    alignSelf: "flex-start",
+    marginBottom: 12,
+  },
+  content: {
+    flex: 1,
     alignItems: "center",
   },
   logoWrap: { alignItems: "center", marginBottom: 12 },
@@ -205,5 +259,29 @@ const styles = StyleSheet.create({
     ...typography.PMedium,
     fontWeight: "600",
     color: colors.pinkAccent,
+  },
+  submitBtn: {
+    width: "100%",
+    backgroundColor: colors.pinkAccent,
+    borderRadius: 15,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 24,
+    shadowColor: "#F4ABB4",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  submitBtnDisabled: {
+    backgroundColor: colors.pinkLight,
+    shadowOpacity: 0.1,
+    opacity: 0.6,
+  },
+  submitBtnText: {
+    ...typography.P,
+    color: colors.white,
+    fontWeight: "700",
+    fontSize: 16,
   },
 });

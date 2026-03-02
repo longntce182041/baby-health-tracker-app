@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkToken = async () => {
       try {
-        const token = await AsyncStorage.getItem("authToken");
+        const token = await AsyncStorage.getItem("accessToken");
         if (token) {
           const response = await authApi.getProfile();
           setUser(response.data);
@@ -32,7 +32,9 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error("Token check failed:", error);
-        await AsyncStorage.removeItem("authToken");
+        await AsyncStorage.removeItem("accessToken");
+        await AsyncStorage.removeItem("refreshToken");
+        await AsyncStorage.removeItem("user");
       } finally {
         setLoading(false);
       }
@@ -44,7 +46,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authApi.loginParent(email, password);
       const { token } = response.data;
-      await AsyncStorage.setItem("authToken", token);
+      await AsyncStorage.setItem("accessToken", token);
+      await AsyncStorage.setItem("refreshToken", token);
       const profileResponse = await authApi.getProfile();
       setUser(profileResponse.data);
       setIsLoggedIn(true);
@@ -64,9 +67,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await AsyncStorage.removeItem("authToken");
+    await AsyncStorage.removeItem("accessToken");
+    await AsyncStorage.removeItem("refreshToken");
+    await AsyncStorage.removeItem("user");
     setUser(null);
     setIsLoggedIn(false);
+  };
+
+  // Helper to set user data when tokens are already saved (e.g., after OTP verification)
+  const setAuthUser = (userData) => {
+    console.log("AuthContext - setAuthUser called with:", userData);
+    setUser(userData);
+    setIsLoggedIn(true);
   };
 
   return (
@@ -78,6 +90,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
+        setAuthUser,
       }}
     >
       {children}

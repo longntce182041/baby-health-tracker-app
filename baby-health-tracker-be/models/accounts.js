@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const accountsSchema = new Schema({
   parent_id: { type: Schema.Types.ObjectId, ref: "Parents" },
   doctor_id: { type: Schema.Types.ObjectId, ref: "Doctors" },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
   password: { type: String, required: true },
   phone: { type: String, sparse: true, default: null },
   status: { type: Boolean, default: true },

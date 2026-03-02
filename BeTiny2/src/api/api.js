@@ -2,7 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Thay đổi URL theo môi trường
-const API_URL = "http://10.66.168.47:3000/api"; // Hoặc IP server thực tế
+const API_URL = "http:///192.168.3.190:3000/api"; // Hoặc IP server thực tế
 
 const api = axios.create({
   baseURL: API_URL,
@@ -19,7 +19,7 @@ export const setOnUnauthorized = (callback) => {
 // Interceptor request - thêm token
 api.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem("authToken");
+    const token = await AsyncStorage.getItem("accessToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -34,7 +34,9 @@ api.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       // Token hết hạn hoặc không hợp lệ
-      await AsyncStorage.removeItem("authToken");
+      await AsyncStorage.removeItem("accessToken");
+      await AsyncStorage.removeItem("refreshToken");
+      await AsyncStorage.removeItem("user");
 
       // Gọi callback để navigate về login
       if (onUnauthorizedCallback) {
