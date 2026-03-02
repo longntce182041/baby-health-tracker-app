@@ -110,14 +110,14 @@ const login = async (req, res) => {
 
         const secret = process.env.JWT_SECRET || '12345-67890-09876-54321';
 
-        const token = jwt.sign(
-            {
-                account_id: account._id,
-                parent_id: account.parent_id,
-                role: account.role,
-            },
-            secret
-        );
+        const tokenPayload = {
+            account_id: account._id,
+            parent_id: account.parent_id,
+            doctor_id: account.doctor_id,
+            role: account.role,
+        };
+
+        const token = jwt.sign(tokenPayload, secret);
 
         res.status(200).json({
             message: 'Login successful',
@@ -125,6 +125,7 @@ const login = async (req, res) => {
                 token,
                 account_id: account._id,
                 parent_id: account.parent_id,
+                doctor_id: account.doctor_id,
                 role: account.role,
             },
         });

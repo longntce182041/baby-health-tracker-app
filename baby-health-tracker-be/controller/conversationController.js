@@ -2,7 +2,7 @@ const babyService = require('../services/babyService');
 const doctorService = require('../services/doctorService');
 const conversationService = require('../services/conversationService');
 
-const sendMessage = async (req, res) => {
+const sendMessageAsParent = async (req, res) => {
     const { doctor_id, baby_id, content } = req.body;
     const parentId = req.user ? req.user.parent_id : null;
 
@@ -35,6 +35,52 @@ const sendMessage = async (req, res) => {
 
         const message = {
             sender: 'parent',
+            content,
+            status: 'sent',
+            timestamp: new Date(),
+        };
+
+        const updatedConversation = await conversationService.addMessageToConversation(conversation._id, message);
+
+        return res.status(201).json({ message: 'Message sent', data: updatedConversation });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+const sendMessageAsDoctor = async (req, res) => {
+    const { parent_id, baby_id, content } = req.body;
+    const doctorId = req.user ? req.user.doctor_id : null;
+
+    try {
+        if (!parent_id || !baby_id || !content) {
+            return res.status(400).json({ message: 'parent_id, baby_id, and content are required' });
+        }
+
+        if (!doctorId) {
+            return res.status(403).json({ message: 'Doctor role required' });
+        }
+
+        const baby = await babyService.findBabyById(baby_id);
+        if (!baby || !baby.status) {
+            return res.status(404).json({ message: 'Baby not found' });
+        }
+
+        const hasParent = Array.isArray(baby.parent_ids)
+            && baby.parent_ids.some((id) => id.toString() === parent_id.toString());
+        if (!hasParent) {
+            return res.status(403).json({ message: 'Parent is not linked to this baby' });
+        }
+
+        const doctor = await doctorService.findDoctorById(doctorId);
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+
+        const conversation = await conversationService.findOrCreateConversation(parent_id, doctorId, baby_id);
+
+        const message = {
+            sender: 'doctor',
             content,
             status: 'sent',
             timestamp: new Date(),
@@ -86,6 +132,7 @@ const getConversation = async (req, res) => {
 };
 
 module.exports = {
-    sendMessage,
+    sendMessageAsParent,
+    sendMessageAsDoctor,
     getConversation,
 };
