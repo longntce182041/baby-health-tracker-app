@@ -96,7 +96,7 @@ DELETE /babies/:id
 
 13) List babies (auth required, parent role)
 GET /babies
-GET /babies?parent_id=65c9b8f2a2f1b6a9b9e1c123
+Note: parent_id is taken from token (req.user.parent_id), not from request parameters.
 
 14) Get baby detail (auth required, parent role)
 GET /babies/:id
