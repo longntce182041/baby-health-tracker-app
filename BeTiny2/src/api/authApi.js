@@ -1,6 +1,5 @@
 import api from "./api";
 import { getItem, setItem, removeItem } from "../storage";
-import { TEST_PHONE, TEST_PASSWORD, TEST_USER } from "../data/mockAuth";
 
 export const register = async (userData) => {
   try {
@@ -86,7 +85,7 @@ export const logout = async () => {
 };
 
 export const getMe = async () => {
-  const res = await api.get("/me");
+  const res = await api.get("/profile/parent");
   return res.data;
 };
 
@@ -110,23 +109,8 @@ export const verifyOtp = async (email, otp) => {
     const res = await api.post("/verify-otp", { email, otp });
     console.log("API verifyOtp response:", res.data);
 
-    // API trả về tương tự login: { data: { token, account_id, parent_id, role }, message }
-    if (res.data?.data?.token) {
-      const { token, account_id, parent_id, role } = res.data.data;
-      console.log("Saving tokens from OTP verification - accessToken:", token);
-
-      const user = {
-        account_id,
-        parent_id,
-        role,
-        email,
-      };
-      console.log("Saving user from OTP:", user);
-
-      await setItem("accessToken", token);
-      await setItem("refreshToken", token);
-      await setItem("user", JSON.stringify(user));
-    }
+    // API chỉ trả về message xác nhận OTP thành công
+    // Không trả về token - user cần đăng nhập sau khi verify
     return res.data;
   } catch (error) {
     throw (
@@ -152,7 +136,7 @@ export const resetPassword = (email, otp, new_password) => {
 export const getProfile = async () => {
   try {
     // Token will be automatically added by api.js interceptor
-    const res = await api.get("/me");
+    const res = await api.get("/profile/parent");
 
     console.log("Get profile response:", res.data);
     return res.data;
@@ -167,9 +151,12 @@ export const getProfile = async () => {
 };
 
 export const updateProfile = (data) => {
-  return api.put("/me", data);
+  return api.put("/profile", data);
 };
 
 export const changePassword = (current_password, new_password) => {
-  return api.put("/me/password", { current_password, new_password });
+  return api.put("/profile/password", {
+    current_password,
+    new_password,
+  });
 };

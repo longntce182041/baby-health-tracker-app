@@ -17,25 +17,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { createBaby, updateBaby } from "../../api/babyApi";
+import { addBaby, updateBaby } from "../../api/babyApi";
 import { colors, typography } from "../../theme";
 
 const { fontFamily } = typography;
-
-const BLOOD_TYPE_CODE = {
-  UNKNOWN: 0,
-  A: 1,
-  B: 2,
-  O: 3,
-  AB: 4,
-};
-
-const BLOOD_TYPE_OPTIONS = [
-  { code: BLOOD_TYPE_CODE.A, label: "A" },
-  { code: BLOOD_TYPE_CODE.B, label: "B" },
-  { code: BLOOD_TYPE_CODE.O, label: "O" },
-  { code: BLOOD_TYPE_CODE.AB, label: "AB" },
-];
 
 const DAY_LABELS = ["Cn", "T2", "T3", "T4", "T5", "T6", "T7"];
 const MONTH_NAMES = [
@@ -150,7 +135,7 @@ export default function BabyFormScreen({ route, navigation }) {
     dobMonth: "",
     dobYear: "",
     gender: "",
-    blood_type: BLOOD_TYPE_CODE.UNKNOWN,
+    note: "",
   });
   const [allergies, setAllergies] = useState([]);
   const [newAllergy, setNewAllergy] = useState("");
@@ -158,7 +143,6 @@ export default function BabyFormScreen({ route, navigation }) {
   const [errors, setErrors] = useState({
     full_name: "",
     dobInput: "",
-    bloodType: "",
   });
   const [focusedDobField, setFocusedDobField] = useState(null);
   const [dobPickerVisible, setDobPickerVisible] = useState(false);
@@ -175,22 +159,23 @@ export default function BabyFormScreen({ route, navigation }) {
   useEffect(() => {
     if (isEdit && baby) {
       const dob = getDobFromIso(baby.date_of_birth);
+      // Extract note from baby.note array (backend returns array of {content, created_at})
+      let noteText = "";
+      if (Array.isArray(baby.note) && baby.note.length > 0) {
+        noteText = baby.note
+          .map((n) => n.content || "")
+          .filter(Boolean)
+          .join("; ");
+      }
       setForm({
         full_name: baby.full_name || "",
         dobDay: dob.day,
         dobMonth: dob.month,
         dobYear: dob.year,
         gender: baby.gender || "",
-        blood_type: (() => {
-          const v = baby.blood_type;
-          if (v == null || v === "") return BLOOD_TYPE_CODE.UNKNOWN;
-          const n = typeof v === "number" ? v : parseInt(String(v), 10);
-          return !Number.isNaN(n) && n >= 0 && n <= 4
-            ? n
-            : BLOOD_TYPE_CODE.UNKNOWN;
-        })(),
+        note: noteText,
       });
-      setAllergies(baby.allergies || []);
+      setAllergies(baby.allergies || baby.alergy || []);
     }
   }, [isEdit, baby]);
 
@@ -296,21 +281,32 @@ export default function BabyFormScreen({ route, navigation }) {
     try {
       const payload = {
         full_name: nameResult.cleaned,
-        date_of_birth: dobResult.iso,
+        day_of_birth: dobResult.iso, // Backend expects day_of_birth
         gender: form.gender || null,
-        blood_type:
-          form.blood_type === BLOOD_TYPE_CODE.UNKNOWN ? null : form.blood_type,
-        allergies: allergies.length > 0 ? allergies : null,
+        alergy: allergies.length > 0 ? allergies : null, // Backend uses "alergy" not "allergies"
+        note: form.note.trim() || null, // Add note field
       };
+      console.log("=== BABY FORM PAYLOAD ===");
+      console.log("Payload:", JSON.stringify(payload, null, 2));
+      console.log("Is Edit:", isEdit);
+
       if (isEdit) {
-        await updateBaby(id, payload);
+        console.log("Updating baby with ID:", id);
+        const updateResponse = await updateBaby(id, payload);
+        console.log("Update response:", updateResponse);
         Alert.alert("Thành công", "Đã cập nhật");
       } else {
-        await createBaby(payload);
+        console.log("Adding new baby...");
+        const addResponse = await addBaby(payload);
+        console.log("Add baby response:", addResponse);
         Alert.alert("Thành công", "Đã thêm bé");
       }
       navigation.goBack();
     } catch (e) {
+      console.error("=== ERROR SUBMITTING BABY ===");
+      console.error("Error:", e);
+      console.error("Error message:", e?.message);
+      console.error("Error response:", e?.response?.data);
       Alert.alert(
         "Lỗi",
         e?.message || e?.response?.data?.message || "Không thể lưu",
@@ -351,10 +347,7 @@ export default function BabyFormScreen({ route, navigation }) {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 24 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.avatarSection}>
@@ -535,14 +528,14 @@ export default function BabyFormScreen({ route, navigation }) {
             <TouchableOpacity
               style={[
                 styles.genderBtn,
-                form.gender === "Nam" && styles.genderBtnActive,
+                form.gender === "male" && styles.genderBtnActive,
               ]}
-              onPress={() => setForm((f) => ({ ...f, gender: "Nam" }))}
+              onPress={() => setForm((f) => ({ ...f, gender: "male" }))}
             >
               <Text
                 style={[
                   styles.genderBtnText,
-                  form.gender === "Nam" && styles.genderBtnTextActive,
+                  form.gender === "male" && styles.genderBtnTextActive,
                 ]}
               >
                 Nam
@@ -551,30 +544,20 @@ export default function BabyFormScreen({ route, navigation }) {
             <TouchableOpacity
               style={[
                 styles.genderBtn,
-                form.gender === "Nữ" && styles.genderBtnActiveFemale,
+                form.gender === "female" && styles.genderBtnActiveFemale,
               ]}
-              onPress={() => setForm((f) => ({ ...f, gender: "Nữ" }))}
+              onPress={() => setForm((f) => ({ ...f, gender: "female" }))}
             >
               <Text
                 style={[
                   styles.genderBtnText,
-                  form.gender === "Nữ" && styles.genderBtnTextActiveFemale,
+                  form.gender === "female" && styles.genderBtnTextActiveFemale,
                 ]}
               >
                 Nữ
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.fieldWrap}>
-          {form.blood_type !== BLOOD_TYPE_CODE.UNKNOWN && (
-            <Text style={styles.bloodTypeHint}>
-              Hiện tại:{" "}
-              {BLOOD_TYPE_OPTIONS.find((o) => o.code === form.blood_type)
-                ?.label ?? "—"}
-            </Text>
-          )}
         </View>
 
         <View style={styles.fieldWrap}>
@@ -612,33 +595,56 @@ export default function BabyFormScreen({ route, navigation }) {
           )}
         </View>
 
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[
-              styles.submitBtn,
-              (loading || !isProfileFormValid) && styles.submitBtnDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={loading || !isProfileFormValid}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} />
-            ) : (
-              <Text style={styles.submitBtnText}>
-                {isEdit ? "Cập nhật hồ sơ" : "Lưu hồ sơ bé"}
-              </Text>
-            )}
-          </TouchableOpacity>
-          {!isEdit && (
-            <TouchableOpacity
-              style={styles.skipBtn}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.skipBtnText}>Bỏ qua, thêm sau</Text>
-            </TouchableOpacity>
-          )}
+        <View style={styles.fieldWrap}>
+          <View style={styles.labelRow}>
+            <Ionicons
+              name="document-text-outline"
+              size={16}
+              color={colors.pinkAccent}
+            />
+            <Text style={styles.label}>Ghi chú</Text>
+          </View>
+          <TextInput
+            style={[styles.input, styles.noteInput]}
+            value={form.note}
+            onChangeText={(v) => setForm((f) => ({ ...f, note: v }))}
+            placeholder="VD: Thông tin bổ sung về bé..."
+            placeholderTextColor={colors.textMuted}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
         </View>
       </ScrollView>
+
+      <View
+        style={[styles.actionsFixed, { paddingBottom: insets.bottom + 16 }]}
+      >
+        <TouchableOpacity
+          style={[
+            styles.submitBtn,
+            (loading || !isProfileFormValid) && styles.submitBtnDisabled,
+          ]}
+          onPress={handleSubmit}
+          disabled={loading || !isProfileFormValid}
+        >
+          {loading ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.submitBtnText}>
+              {isEdit ? "Cập nhật hồ sơ" : "Lưu hồ sơ bé"}
+            </Text>
+          )}
+        </TouchableOpacity>
+        {!isEdit && (
+          <TouchableOpacity
+            style={styles.skipBtn}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.skipBtnText}>Bỏ qua, thêm sau</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       <Modal visible={dobPickerVisible} transparent animationType="fade">
         <Pressable
@@ -915,11 +921,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginHorizontal: 4,
   },
-  bloodTypeHint: {
-    marginTop: 6,
-    fontSize: 13,
-    color: colors.textMuted,
-  },
   dateIconWrap: {
     marginLeft: 8,
     width: 40,
@@ -1093,33 +1094,16 @@ const styles = StyleSheet.create({
   genderBtnTextActive: { color: colors.blueAccent },
   genderBtnTextActiveFemale: { color: colors.pinkAccent },
 
-  bloodTypeRow: { flexDirection: "row", gap: 8 },
-  bloodTypeBtn: {
-    flex: 1,
-    height: 40,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.pinkLight,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  bloodTypeBtnActive: {
-    borderColor: colors.pinkAccent,
-    backgroundColor: colors.pinkLight,
-  },
-  bloodTypeBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.textMuted,
-  },
-  bloodTypeBtnTextActive: { color: colors.pinkAccent },
-
   fieldRow: { flexDirection: "row", gap: 12, marginBottom: 20 },
   fieldHalf: { flex: 1 },
 
   allergyInputRow: { flexDirection: "row", gap: 8 },
   allergyInput: { flex: 1 },
+  noteInput: {
+    minHeight: 100,
+    paddingTop: 12,
+    textAlignVertical: "top",
+  },
   addAllergyBtn: {
     width: 48,
     height: 48,
@@ -1150,25 +1134,53 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 
-  actions: { marginTop: 16 },
+  actionsFixed: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: { elevation: 8 },
+    }),
+  },
   submitBtn: {
-    height: 48,
-    borderRadius: 14,
+    height: 52,
+    borderRadius: 16,
     backgroundColor: colors.pinkAccent,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 8,
     ...Platform.select({
       ios: {
         shadowColor: colors.pinkAccent,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
       },
-      android: { elevation: 6 },
+      android: { elevation: 8 },
     }),
   },
-  submitBtnDisabled: { opacity: 0.6 },
+  submitBtnDisabled: {
+    backgroundColor: colors.textMuted,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#999",
+        shadowOpacity: 0.2,
+      },
+      android: { elevation: 2 },
+    }),
+  },
   submitBtnText: {
     fontSize: 16,
     fontFamily,
@@ -1176,10 +1188,15 @@ const styles = StyleSheet.create({
     color: colors.white,
   },
   skipBtn: {
-    height: 48,
+    height: 44,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  skipBtnText: { fontSize: 15, fontFamily, color: colors.textMuted },
+  skipBtnText: {
+    fontSize: 14,
+    fontFamily,
+    color: colors.textMuted,
+    fontWeight: "600",
+  },
 });

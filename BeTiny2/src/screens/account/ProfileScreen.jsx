@@ -42,7 +42,7 @@ export default function ProfileScreen({ navigation }) {
     (async () => {
       console.log("ProfileScreen - isLoggedIn:", isLoggedIn);
       console.log("ProfileScreen - user from context:", user);
-      const token = await getItem("token");
+      const token = await getItem("accessToken");
       console.log("ProfileScreen - token from storage:", token);
 
       setLoading(true);

@@ -73,21 +73,16 @@ export default function VerifyOTP({ route, navigation }) {
       const res = await verifyOtp(email, otp);
       console.log("VerifyOTP response:", res);
 
-      // Nếu không throw error thì tức là thành công, token đã được lưu bởi verifyOtp
-      // API trả về: { data: { token, account_id, parent_id, role }, message }
-      if (res?.data?.token) {
-        const userData = {
-          account_id: res.data.account_id,
-          parent_id: res.data.parent_id,
-          role: res.data.role,
-          email: email,
-        };
-        console.log("Setting user after OTP:", userData);
-        setAuthUser(userData);
-      }
-      navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+      // OTP verification thành công - backend chỉ trả về message, không có token
+      // User cần đăng nhập để lấy token
+      setLoading(false);
+      navigation.navigate("Login");
       setTimeout(() => {
-        Alert.alert("Thành công", res?.message || "Xác thực OTP thành công!");
+        Alert.alert(
+          "Xác thực thành công!",
+          "Tài khoản của bạn đã được kích hoạt. Vui lòng đăng nhập.",
+          [{ text: "OK" }],
+        );
       }, 500);
     } catch (e) {
       setLoading(false);

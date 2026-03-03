@@ -170,7 +170,7 @@ export default function HomeScreen({ navigation }) {
       }
       try {
         const res = await getBabies();
-        const list = Array.isArray(res?.data) ? res.data : [];
+        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
         setBabies(list);
         setSelectedBaby(list.length > 0 ? list[0] : null);
       } catch (err) {

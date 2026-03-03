@@ -190,13 +190,19 @@ export default function GrowthChartScreen({ navigation, route }) {
       if (baby) {
         const babyId = baby.baby_id || baby.id;
         const growthRes = await getGrowthRecords(babyId);
-        const records = Array.isArray(growthRes?.data) ? growthRes.data : [];
+        // Backend returns {data: {baby_id, points: [...]}}
+        const records = Array.isArray(growthRes?.data?.data?.points)
+          ? growthRes.data.data.points
+          : Array.isArray(growthRes?.data?.points)
+            ? growthRes.data.points
+            : [];
         setGrowthRecords(records);
       } else {
         setGrowthRecords([]);
       }
     } catch (err) {
-      console.error("GrowthChart getBabies:", err);
+      console.error("GrowthChart load error:", err);
+      console.error("Error details:", err?.response?.data);
       setBabies([]);
       setSelectedBaby(null);
       setGrowthRecords([]);
@@ -214,7 +220,12 @@ export default function GrowthChartScreen({ navigation, route }) {
     const babyId = selectedBaby.baby_id || selectedBaby.id;
     getGrowthRecords(babyId)
       .then((growthRes) => {
-        const records = Array.isArray(growthRes?.data) ? growthRes.data : [];
+        // Backend returns {data: {baby_id, points: [...]}}
+        const records = Array.isArray(growthRes?.data?.data?.points)
+          ? growthRes.data.data.points
+          : Array.isArray(growthRes?.data?.points)
+            ? growthRes.data.points
+            : [];
         setGrowthRecords(records);
       })
       .catch(() => setGrowthRecords([]));
@@ -275,7 +286,9 @@ export default function GrowthChartScreen({ navigation, route }) {
         head_circumference: headVal,
         recorded_at: measureForm.date,
       };
-      await createGrowthRecord(babyId, payload);
+      const createRes = await createGrowthRecord(babyId, payload);
+      console.log("Growth record created:", createRes?.data);
+      Alert.alert("Thành công", "Đã lưu chỉ số tăng trưởng");
       setAddModalVisible(false);
       setMeasureForm({
         date: "",
@@ -283,9 +296,24 @@ export default function GrowthChartScreen({ navigation, route }) {
         height: "",
         head_circumference: "",
       });
-      load();
+
+      // Reload growth records for selected baby
+      const growthRes = await getGrowthRecords(babyId);
+      const records = Array.isArray(growthRes?.data?.data?.points)
+        ? growthRes.data.data.points
+        : Array.isArray(growthRes?.data?.points)
+          ? growthRes.data.points
+          : [];
+      setGrowthRecords(records);
     } catch (e) {
-      Alert.alert("Lỗi", e?.message || "Không thể lưu chỉ số");
+      console.error("=== ERROR SAVING GROWTH RECORD ===");
+      console.error("Error:", e);
+      console.error("Error message:", e?.message);
+      console.error("Error response:", e?.response?.data);
+      Alert.alert(
+        "Lỗi",
+        e?.response?.data?.message || e?.message || "Không thể lưu chỉ số",
+      );
     }
     setMeasureSaving(false);
   };

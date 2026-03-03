@@ -1,7 +1,22 @@
 import api from "./api";
 
 export const getGrowthRecords = (babyId) => {
-  return api.get(`/growth-records?baby_id=${babyId}`);
+  return api.get(`/growth-records?baby_id=${babyId}`).then((response) => {
+    // Backend returns {data: {baby_id, points: [...]}}
+    // Map record_date to recorded_at for frontend compatibility
+    if (response?.data?.data?.points) {
+      response.data.data.points = response.data.data.points.map((record) => ({
+        ...record,
+        recorded_at: record.record_date || record.recorded_at,
+      }));
+    } else if (response?.data?.points) {
+      response.data.points = response.data.points.map((record) => ({
+        ...record,
+        recorded_at: record.record_date || record.recorded_at,
+      }));
+    }
+    return response;
+  });
 };
 
 export const createGrowthRecord = (babyId, data) => {
