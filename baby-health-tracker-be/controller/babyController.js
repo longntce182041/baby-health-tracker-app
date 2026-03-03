@@ -151,10 +151,14 @@ const deleteBaby = async (req, res) => {
 };
 
 const listBabies = async (req, res) => {
-  const { parent_id } = req.query;
+  const parentId = req.user ? req.user.parent_id : null;
 
   try {
-    const babies = await babyService.listBabies(parent_id);
+    if (!parentId) {
+      return res.status(403).json({ message: "Parent role required" });
+    }
+
+    const babies = await babyService.listBabies(parentId);
     res.status(200).json({ message: "Baby list fetched", data: babies });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
