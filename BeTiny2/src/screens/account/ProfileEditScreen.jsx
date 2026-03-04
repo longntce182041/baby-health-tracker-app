@@ -35,10 +35,10 @@ export default function ProfileEditScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { user, isLoggedIn } = useAuth();
   const [profile, setProfile] = useState({
-    fullName: "",
+    full_name: "",
     email: "",
     phone: "",
-    wallet_point: 0,
+    wallet_points: 0,
     avatar_url: "",
   });
   const [loading, setLoading] = useState(true);
@@ -61,13 +61,13 @@ export default function ProfileEditScreen({ navigation }) {
         if (storedRole && ROLES.some((r) => r.label === storedRole)) {
           setRole(ROLES.find((r) => r.label === storedRole)?.id || "mother");
         }
-        if (res?.success && res?.data) {
+        if (res?.data) {
           const d = res.data;
           setProfile({
-            fullName: d.fullName ?? d.full_name ?? "",
+            full_name: d.full_name ?? user?.full_name ?? "",
             email: d.email ?? "",
             phone: d.phone ?? user?.phone ?? "",
-            wallet_point: d.wallet_point ?? 0,
+            wallet_points: d.wallet_points ?? d.wallet_point ?? 0,
             avatar_url: d.avatar_url ?? user?.avatar_url ?? "",
           });
           if (d.role && ROLES.some((r) => r.label === d.role)) {
@@ -76,7 +76,7 @@ export default function ProfileEditScreen({ navigation }) {
         } else {
           setProfile((p) => ({
             ...p,
-            fullName: user?.fullName ?? user?.full_name ?? "",
+            full_name: user?.full_name ?? "",
             email: user?.email ?? "",
             phone: user?.phone ?? p.phone,
             avatar_url: user?.avatar_url ?? p.avatar_url,
@@ -85,7 +85,7 @@ export default function ProfileEditScreen({ navigation }) {
       } catch (e) {
         setProfile((p) => ({
           ...p,
-          fullName: user?.fullName ?? user?.full_name ?? "",
+          full_name: user?.full_name ?? "",
           email: user?.email ?? "",
           phone: user?.phone ?? p.phone,
           avatar_url: user?.avatar_url ?? p.avatar_url,
@@ -96,16 +96,16 @@ export default function ProfileEditScreen({ navigation }) {
   }, [isLoggedIn, user]);
 
   const handleSave = async () => {
-    const raw = profile.fullName || "";
+    const raw = profile.full_name || "";
     const cleaned = raw.replace(/\s+/g, " ").trim();
     if (!cleaned || cleaned.length < 2) {
       Alert.alert("Lỗi", "Họ và tên phải có ít nhất 2 ký tự.");
-      setProfile((p) => ({ ...p, fullName: cleaned }));
+      setProfile((p) => ({ ...p, full_name: cleaned }));
       return;
     }
     if (cleaned.length > 70) {
       Alert.alert("Lỗi", "Họ và tên tối đa 70 ký tự.");
-      setProfile((p) => ({ ...p, fullName: cleaned.slice(0, 70) }));
+      setProfile((p) => ({ ...p, full_name: cleaned.slice(0, 70) }));
       return;
     }
 
@@ -113,7 +113,7 @@ export default function ProfileEditScreen({ navigation }) {
     try {
       const r = ROLES.find((r) => r.id === role);
       await updateProfile({
-        fullName: cleaned,
+        full_name: cleaned,
         phone: profile.phone,
         role: r?.label ?? "Mẹ",
       });
@@ -195,7 +195,7 @@ export default function ProfileEditScreen({ navigation }) {
                 }
                 return (
                   <Text style={styles.avatarText}>
-                    {(profile.fullName || user?.fullName || "P")
+                    {(profile.full_name || user?.full_name || "P")
                       .charAt(0)
                       .toUpperCase()}
                   </Text>
@@ -271,8 +271,8 @@ export default function ProfileEditScreen({ navigation }) {
         <Text style={styles.label}>Họ và tên</Text>
         <TextInput
           style={styles.input}
-          value={profile.fullName}
-          onChangeText={(v) => setProfile((p) => ({ ...p, fullName: v }))}
+          value={profile.full_name}
+          onChangeText={(v) => setProfile((p) => ({ ...p, full_name: v }))}
           placeholder="Họ và tên"
           placeholderTextColor={colors.textMuted}
         />
@@ -287,7 +287,7 @@ export default function ProfileEditScreen({ navigation }) {
         <Text style={styles.label}>Số điện thoại</Text>
         <TextInput
           style={[styles.input, styles.inputReadOnly]}
-          value={profile.phone}
+          value={profile.phone || "Chưa cập nhật"}
           editable={false}
           placeholderTextColor={colors.textMuted}
         />
@@ -317,7 +317,7 @@ export default function ProfileEditScreen({ navigation }) {
             <View>
               <Text style={styles.walletLabel}>Điểm ví</Text>
               <Text style={styles.walletPoints}>
-                {profile.wallet_point} điểm
+                {profile.wallet_points} điểm
               </Text>
             </View>
           </View>

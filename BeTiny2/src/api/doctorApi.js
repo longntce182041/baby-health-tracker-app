@@ -9,6 +9,15 @@ import {
 export const getDoctors = async (params = {}) => {
   try {
     const res = await api.get("/doctors", { params });
+    console.log("getDoctors response:", res);
+    // Map backend fields to frontend expectations
+    if (res?.data?.data) {
+      res.data.data = res.data.data.map((doctor) => ({
+        ...doctor,
+        id: doctor._id,
+        doctor_id: doctor._id,
+      }));
+    }
     return res.data;
   } catch (error) {
     console.warn(
@@ -22,6 +31,15 @@ export const getDoctors = async (params = {}) => {
 export const getDoctorById = async (id) => {
   try {
     const res = await api.get(`/doctors/${id}`);
+    console.log("getDoctorById response:", res);
+    // Map backend fields to frontend expectations
+    if (res?.data?.data) {
+      res.data.data = {
+        ...res.data.data,
+        id: res.data.data._id,
+        doctor_id: res.data.data._id,
+      };
+    }
     return res.data;
   } catch (error) {
     console.warn("getDoctorById error, dùng mock:", error?.message || error);
@@ -31,7 +49,17 @@ export const getDoctorById = async (id) => {
 
 export const getDoctorSchedules = async (doctorId, params = {}) => {
   try {
-    const res = await api.get(`/doctors/${doctorId}/schedules`, { params });
+    const res = await api.get(`/doctors/${doctorId}/schedule`, { params });
+    console.log("getDoctorSchedules response:", res);
+    // Map backend fields to frontend expectations
+    if (res?.data?.data) {
+      res.data.data = res.data.data.map((schedule) => ({
+        ...schedule,
+        id: schedule._id,
+        schedule_id: schedule._id,
+        available_date: schedule.date,
+      }));
+    }
     return res.data;
   } catch (error) {
     console.warn(

@@ -28,7 +28,7 @@ export default function ProfileScreen({ navigation }) {
     fullName: "",
     email: "",
     phone: "",
-    wallet_point: 0,
+    wallet_points: 0,
     avatar_url: "",
   });
   const [loading, setLoading] = useState(true);
@@ -45,22 +45,28 @@ export default function ProfileScreen({ navigation }) {
       const token = await getItem("accessToken");
       console.log("ProfileScreen - token from storage:", token);
 
+      // Check cả token để tránh race condition khi logout
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const res = await getProfile();
         console.log("ProfileScreen - getProfile response:", res);
-        if (res?.success && res?.data) {
+        if (res?.data) {
           const d = res.data;
           setProfile({
             fullName:
-              d.fullName ??
               d.full_name ??
-              user?.fullName ??
+              d.fullName ??
               user?.full_name ??
+              user?.fullName ??
               "",
             email: d.email ?? user?.email ?? "",
             phone: d.phone ?? user?.phone ?? "",
-            wallet_point: d.wallet_point ?? 0,
+            wallet_points: d.wallet_points ?? d.wallet_point ?? 0,
             avatar_url: d.avatar_url ?? user?.avatar_url ?? "",
           });
           if (d.role) {
@@ -102,9 +108,15 @@ export default function ProfileScreen({ navigation }) {
   const goHome = () => navigation.navigate("Main", { screen: "HomeTab" });
   const goToProfileEdit = () => navigation.navigate("ProfileEdit");
 
-  const handleLogout = () => {
-    if (logout) logout();
-    navigation.navigate("Main", { screen: "HomeTab" });
+  const handleLogout = async () => {
+    if (logout) {
+      await logout();
+    }
+    // Navigate về Welcome screen thay vì HomeTab để tránh race condition
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Welcome" }],
+    });
   };
 
   const displayName =

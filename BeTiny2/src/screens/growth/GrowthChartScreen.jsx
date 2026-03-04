@@ -176,7 +176,8 @@ export default function GrowthChartScreen({ navigation, route }) {
     }
     try {
       const res = await getBabies();
-      const list = Array.isArray(res?.data) ? res.data : [];
+      console.log("GrowthChart - getBabies response:", res);
+      const list = Array.isArray(res?.data?.data) ? res.data.data : [];
       setBabies(list);
       const preselected = initialBabyId
         ? list.find(

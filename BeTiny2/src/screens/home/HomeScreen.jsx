@@ -162,7 +162,8 @@ export default function HomeScreen({ navigation }) {
       console.log("HomeScreen - token from storage:", token);
 
       setLoading(true);
-      if (!isLoggedIn) {
+      // Check cả isLoggedIn và token để tránh race condition khi logout
+      if (!isLoggedIn || !token) {
         setBabies([]);
         setSelectedBaby(null);
         setLoading(false);
@@ -193,6 +194,7 @@ export default function HomeScreen({ navigation }) {
       try {
         const res = await getProfile();
         if (res?.success && res?.data) {
+          d;
           const d = res.data;
           const name =
             d.fullName ?? d.full_name ?? user?.fullName ?? user?.full_name;

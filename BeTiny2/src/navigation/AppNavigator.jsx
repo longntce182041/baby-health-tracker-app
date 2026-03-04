@@ -2,9 +2,11 @@ import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { View, ActivityIndicator } from "react-native";
 import { navigationRef } from "./navigationRef";
 import CustomTabBar from "../components/CustomTabBar";
 import { useAuth } from "../context/AuthContext";
+import { colors } from "../theme";
 
 import HomeScreen from "../screens/home/HomeScreen";
 import WelcomeScreen from "../screens/auth/WelcomeScreen";
@@ -81,7 +83,24 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
+
+  // Hiển thị loading khi đang kiểm tra authentication
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.pinkAccent} />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator

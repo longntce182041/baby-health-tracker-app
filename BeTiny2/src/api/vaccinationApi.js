@@ -53,8 +53,27 @@ export const bookVaccinationAppointment = (data) => {
   return api.post("/vaccination-schedules", data);
 };
 
-export const getVaccinationSchedules = (babyId) => {
-  return api.get(`/vaccination-schedules?baby_id=${babyId}`);
+export const getVaccinationSchedules = async (babyId) => {
+  try {
+    const res = await api.get(`/vaccination-schedules?baby_id=${babyId}`);
+    // Map backend fields to frontend expectations
+    if (res?.data?.data) {
+      res.data.data = res.data.data.map((schedule) => ({
+        ...schedule,
+        id: schedule._id || schedule.id,
+        vaccination_id: schedule._id || schedule.id,
+        vaccination_date: schedule.injection_date,
+        scheduled_date: schedule.injection_date,
+        // Extract vaccine name from populated vaccine_id
+        vaccine_name: schedule.vaccine_id?.vaccine_name || "Tiêm chủng",
+        dose_number: schedule.vaccine_id?.dose_number,
+      }));
+    }
+    return res;
+  } catch (error) {
+    console.warn("getVaccinationSchedules error:", error?.message || error);
+    return { success: false, data: [], message: error?.message };
+  }
 };
 
 export const getVaccinationScheduleDetail = (scheduleId) => {

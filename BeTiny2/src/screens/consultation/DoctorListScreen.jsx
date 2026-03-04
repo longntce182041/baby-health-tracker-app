@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,38 +13,42 @@ import {
   Modal,
   Pressable,
   Image,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { getDoctors } from '../../api/doctorApi';
-import { useAuth } from '../../context/AuthContext';
-import { colors, typography } from '../../theme';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { getDoctors } from "../../api/doctorApi";
+import { useAuth } from "../../context/AuthContext";
+import { colors, typography } from "../../theme";
 
 const { fontFamily } = typography;
 
-const ALL_LABEL = 'Tất cả';
+const ALL_LABEL = "Tất cả";
 const SPECIALTIES = [
   ALL_LABEL,
-  'Nhi khoa',
-  'Dinh dưỡng',
-  'Tai Mũi Họng',
-  'Sơ sinh',
-  'Tiêm chủng',
-  'Tâm lý bé',
-  'Da liễu',
-  'Răng hàm mặt',
-  'Mắt',
+  "Nhi khoa",
+  "Dinh dưỡng",
+  "Tai Mũi Họng",
+  "Sơ sinh",
+  "Tiêm chủng",
+  "Tâm lý bé",
+  "Da liễu",
+  "Răng hàm mặt",
+  "Mắt",
 ];
 
 function isConsulting(doctor) {
-  return doctor?.is_consulting === true || doctor?.status === 'busy' || doctor?.status === 'consulting';
+  return (
+    doctor?.is_consulting === true ||
+    doctor?.status === "busy" ||
+    doctor?.status === "consulting"
+  );
 }
 
 function getDoctorDisplayName(fullName) {
-  if (!fullName || typeof fullName !== 'string') return 'BS';
+  if (!fullName || typeof fullName !== "string") return "BS";
   const trimmed = fullName.trim();
-  if (!trimmed) return 'BS';
+  if (!trimmed) return "BS";
   const parts = trimmed.split(/\s+/).filter(Boolean);
   const ten = parts.length > 0 ? parts[parts.length - 1] : trimmed;
   return `BS ${ten}`;
@@ -55,7 +59,7 @@ export default function DoctorListScreen({ navigation }) {
   const { user } = useAuth();
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
   const [selectedSpecialties, setSelectedSpecialties] = useState([]);
 
@@ -64,12 +68,20 @@ export default function DoctorListScreen({ navigation }) {
       setLoading(true);
       try {
         const res = await getDoctors();
-        if (res?.success && Array.isArray(res?.data)) {
+        console.log("DoctorListScreen getDoctors response:", res);
+        // Backend returns {data: [...], message: "..."} without success field
+        if (Array.isArray(res?.data)) {
+          console.log("DoctorListScreen doctors data:", res.data);
           setDoctors(res.data);
         } else {
+          console.warn(
+            "DoctorListScreen: Expected array but got:",
+            typeof res?.data,
+          );
           setDoctors([]);
         }
       } catch (e) {
+        console.error("DoctorListScreen getDoctors error:", e);
         setDoctors([]);
       }
       setLoading(false);
@@ -82,23 +94,27 @@ export default function DoctorListScreen({ navigation }) {
       return;
     }
     setSelectedSpecialties((prev) => {
-      const next = prev.includes(name) ? prev.filter((s) => s !== name) : [...prev.filter((s) => s !== ALL_LABEL), name];
+      const next = prev.includes(name)
+        ? prev.filter((s) => s !== name)
+        : [...prev.filter((s) => s !== ALL_LABEL), name];
       return next;
     });
   };
 
   const isAllSelected = selectedSpecialties.length === 0;
-  const goBack = () => navigation.navigate('Main', { screen: 'HomeTab' });
+  const goBack = () => navigation.navigate("Main", { screen: "HomeTab" });
   const filterPanelTop = insets.top + 70;
 
   const filteredDoctors = doctors.filter((d) => {
     const matchSearch =
       !searchQuery.trim() ||
-      (d.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (d.specialty || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (d.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (d.specialty || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchSpec =
       isAllSelected ||
-      selectedSpecialties.some((s) => (d.specialty || '').toLowerCase().includes(s.toLowerCase()));
+      selectedSpecialties.some((s) =>
+        (d.specialty || "").toLowerCase().includes(s.toLowerCase()),
+      );
     return matchSearch && matchSpec;
   });
 
@@ -112,25 +128,38 @@ export default function DoctorListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {Platform.OS === 'android' && <StatusBar backgroundColor="#F4ABB4" barStyle="light-content" />}
+      {Platform.OS === "android" && (
+        <StatusBar backgroundColor="#F4ABB4" barStyle="light-content" />
+      )}
       <LinearGradient
-        colors={['#F4ABB4', '#FED3DD']}
+        colors={["#F4ABB4", "#FED3DD"]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={[styles.headerGrad, { paddingTop: insets.top + 12 }]}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.headerBtn} onPress={goBack} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={goBack}
+            activeOpacity={0.7}
+          >
             <Ionicons name="arrow-back" size={22} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Bác sĩ tư vấn</Text>
           <TouchableOpacity
             style={styles.pointsPill}
-            onPress={() => navigation.navigate('TopUpPoints')}
+            onPress={() => navigation.navigate("TopUpPoints")}
             activeOpacity={0.8}
           >
-            <Text style={styles.pointsPillText}>{user?.wallet_point ?? 0}</Text>
-            <Ionicons name="add" size={14} color={colors.white} style={{ marginLeft: 2 }} />
+            <Text style={styles.pointsPillText}>
+              {user?.wallet_points ?? 0}
+            </Text>
+            <Ionicons
+              name="add"
+              size={14}
+              color={colors.white}
+              style={{ marginLeft: 2 }}
+            />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -156,7 +185,9 @@ export default function DoctorListScreen({ navigation }) {
           <Ionicons name="options-outline" size={24} color={colors.white} />
           {!isAllSelected && selectedSpecialties.length > 0 && (
             <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{selectedSpecialties.length}</Text>
+              <Text style={styles.filterBadgeText}>
+                {selectedSpecialties.length}
+              </Text>
             </View>
           )}
         </TouchableOpacity>
@@ -170,17 +201,32 @@ export default function DoctorListScreen({ navigation }) {
         onRequestClose={() => setFilterVisible(false)}
       >
         <View style={styles.filterModalOverlayWrap}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={() => setFilterVisible(false)} />
-          <Pressable style={[styles.filterModalPanel, { marginTop: filterPanelTop }]} onPress={(e) => e.stopPropagation()}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setFilterVisible(false)}
+          />
+          <Pressable
+            style={[styles.filterModalPanel, { marginTop: filterPanelTop }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={styles.filterModalHeader}>
               <Text style={styles.filterModalTitle}>Chuyên khoa</Text>
-              <TouchableOpacity onPress={() => setFilterVisible(false)} hitSlop={12}>
+              <TouchableOpacity
+                onPress={() => setFilterVisible(false)}
+                hitSlop={12}
+              >
                 <Ionicons name="checkmark" size={26} color={colors.text} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.filterModalList} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.filterModalList}
+              showsVerticalScrollIndicator={false}
+            >
               {SPECIALTIES.map((name) => {
-                const selected = name === ALL_LABEL ? isAllSelected : selectedSpecialties.includes(name);
+                const selected =
+                  name === ALL_LABEL
+                    ? isAllSelected
+                    : selectedSpecialties.includes(name);
                 return (
                   <TouchableOpacity
                     key={name}
@@ -188,8 +234,21 @@ export default function DoctorListScreen({ navigation }) {
                     onPress={() => toggleSpecialty(name)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.filterItemText, selected && styles.filterItemTextSelected]}>{name}</Text>
-                    {selected && <Ionicons name="checkmark" size={20} color={colors.pinkAccent} />}
+                    <Text
+                      style={[
+                        styles.filterItemText,
+                        selected && styles.filterItemTextSelected,
+                      ]}
+                    >
+                      {name}
+                    </Text>
+                    {selected && (
+                      <Ionicons
+                        name="checkmark"
+                        size={20}
+                        color={colors.pinkAccent}
+                      />
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -200,25 +259,42 @@ export default function DoctorListScreen({ navigation }) {
 
       <FlatList
         data={filteredDoctors}
-        keyExtractor={(item) => item._id || item.doctor_id || item.id || String(Math.random())}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 75 }]}
-        ListEmptyComponent={<Text style={styles.empty}>Chưa có bác sĩ phù hợp</Text>}
+        keyExtractor={(item) =>
+          item._id || item.doctor_id || item.id || String(Math.random())
+        }
+        contentContainerStyle={[
+          styles.list,
+          { paddingBottom: insets.bottom + 75 },
+        ]}
+        ListEmptyComponent={
+          <Text style={styles.empty}>Chưa có bác sĩ phù hợp</Text>
+        }
         renderItem={({ item }) => {
           const doctorId = item._id || item.doctor_id || item.id;
-          const rating = typeof item.rating === 'number' ? item.rating : (typeof item.avg_rating === 'number' ? item.avg_rating : 0);
+          const rating =
+            typeof item.rating === "number"
+              ? item.rating
+              : typeof item.avg_rating === "number"
+                ? item.avg_rating
+                : 0;
           const value = Math.min(5, Math.max(0, rating));
           const consulting = isConsulting(item);
           return (
             <TouchableOpacity
               style={styles.card}
-              onPress={() => navigation.navigate('DoctorDetail', { id: doctorId, doctor: item })}
+              onPress={() =>
+                navigation.navigate("DoctorDetail", {
+                  id: doctorId,
+                  doctor: item,
+                })
+              }
               activeOpacity={0.85}
             >
               <View style={styles.cardAvatar}>
                 {(item.avatar_url ?? item.avatar) ? (
                   <Image
                     source={
-                      typeof (item.avatar_url ?? item.avatar) === 'number'
+                      typeof (item.avatar_url ?? item.avatar) === "number"
                         ? (item.avatar_url ?? item.avatar)
                         : { uri: item.avatar_url ?? item.avatar }
                     }
@@ -227,18 +303,24 @@ export default function DoctorListScreen({ navigation }) {
                   />
                 ) : (
                   <Text style={styles.cardAvatarText}>
-                    {(item.full_name || 'B').charAt(0).toUpperCase()}
+                    {(item.full_name || "B").charAt(0).toUpperCase()}
                   </Text>
                 )}
               </View>
               <View style={styles.cardBody}>
-                <Text style={styles.cardTitle}>{getDoctorDisplayName(item.full_name)}</Text>
-                <Text style={styles.cardMeta}>{item.specialty || '—'}</Text>
+                <Text style={styles.cardTitle}>
+                  {getDoctorDisplayName(item.full_name)}
+                </Text>
+                <Text style={styles.cardMeta}>{item.specialty || "—"}</Text>
                 <View style={styles.starRow}>
                   {[1, 2, 3, 4, 5].map((i) => {
                     const full = value >= i;
                     const half = value >= i - 0.5 && value < i;
-                    const name = full ? 'star' : half ? 'star-half' : 'star-outline';
+                    const name = full
+                      ? "star"
+                      : half
+                        ? "star-half"
+                        : "star-outline";
                     return (
                       <Ionicons
                         key={i}
@@ -257,28 +339,46 @@ export default function DoctorListScreen({ navigation }) {
                     style={styles.cardActionBtn}
                     onPress={(e) => {
                       e.stopPropagation();
-                      navigation.navigate('Consultation', { doctorId, doctor: item });
+                      navigation.navigate("Consultation", {
+                        doctorId,
+                        doctor: item,
+                      });
                     }}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="calendar-outline" size={18} color={colors.white} />
+                    <Ionicons
+                      name="calendar-outline"
+                      size={18}
+                      color={colors.white}
+                    />
                   </TouchableOpacity>
                   {consulting && (
                     <TouchableOpacity
                       style={styles.cardActionBtn}
                       onPress={(e) => {
                         e.stopPropagation();
-                        navigation.navigate('Chat', { doctorId, doctor: item });
+                        navigation.navigate("Chat", { doctorId, doctor: item });
                       }}
                       activeOpacity={0.8}
                     >
-                      <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.white} />
+                      <Ionicons
+                        name="chatbubble-ellipses-outline"
+                        size={18}
+                        color={colors.white}
+                      />
                     </TouchableOpacity>
                   )}
                 </View>
                 <View style={styles.statusRow}>
-                  <View style={[styles.statusDot, { backgroundColor: consulting ? '#E53935' : '#4CAF50' }]} />
-                  <Text style={styles.statusText}>{consulting ? 'Đang tư vấn' : 'Đặt lịch'}</Text>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      { backgroundColor: consulting ? "#E53935" : "#4CAF50" },
+                    ]}
+                  />
+                  <Text style={styles.statusText}>
+                    {consulting ? "Đang tư vấn" : "Đặt lịch"}
+                  </Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -291,7 +391,12 @@ export default function DoctorListScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.background,
+  },
   headerGrad: {
     paddingBottom: 50,
     paddingHorizontal: 16,
@@ -299,31 +404,41 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   headerBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerTitle: { ...typography.H3, fontFamily, color: colors.white, fontWeight: '600' },
+  headerTitle: {
+    ...typography.H3,
+    fontFamily,
+    color: colors.white,
+    fontWeight: "600",
+  },
   pointsPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: "rgba(255,255,255,0.28)",
   },
-  pointsPillText: { fontSize: 13, fontFamily, fontWeight: '700', color: colors.white },
+  pointsPillText: {
+    fontSize: 13,
+    fontFamily,
+    fontWeight: "700",
+    color: colors.white,
+  },
   searchWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
     marginTop: -32,
@@ -331,17 +446,22 @@ const styles = StyleSheet.create({
   },
   searchBar: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.white,
     borderRadius: 20,
     paddingVertical: 12,
     paddingLeft: 18,
     paddingRight: 14,
     borderWidth: 1,
-    borderColor: 'rgba(244, 171, 180, 0.3)',
+    borderColor: "rgba(244, 171, 180, 0.3)",
     ...Platform.select({
-      ios: { shadowColor: '#F4ABB4', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      ios: {
+        shadowColor: "#F4ABB4",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
       android: { elevation: 3 },
     }),
   },
@@ -358,36 +478,41 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 18,
     backgroundColor: colors.pinkAccent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: "rgba(255,255,255,0.6)",
     ...Platform.select({
-      ios: { shadowColor: colors.pinkAccent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10 },
+      ios: {
+        shadowColor: colors.pinkAccent,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+      },
       android: { elevation: 4 },
     }),
   },
   filterBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: -4,
     right: -4,
     backgroundColor: colors.blueAccent,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 4,
     borderWidth: 2,
     borderColor: colors.white,
   },
-  filterBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
+  filterBadgeText: { fontSize: 11, fontWeight: "700", color: colors.white },
   filterModalOverlayWrap: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'flex-start',
+    backgroundColor: "rgba(0,0,0,0.35)",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "flex-start",
   },
   filterModalPanel: {
     width: 200,
@@ -400,7 +525,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: -2, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: -2, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 12,
+      },
       android: { elevation: 8 },
     }),
   },
@@ -408,41 +538,46 @@ const styles = StyleSheet.create({
     maxHeight: 260,
   },
   filterModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 8,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
+    borderBottomColor: "rgba(0,0,0,0.08)",
   },
   filterModalTitle: {
     fontSize: 14,
     fontFamily,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
   },
   filterItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 10,
     paddingHorizontal: 14,
   },
   filterItemText: { fontSize: 14, fontFamily, color: colors.textSecondary },
-  filterItemTextSelected: { color: colors.pinkAccent, fontWeight: '600' },
+  filterItemTextSelected: { color: colors.pinkAccent, fontWeight: "600" },
   list: { paddingHorizontal: 16, paddingTop: 0 },
   card: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: colors.white,
     borderRadius: 20,
     padding: 14,
     marginBottom: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: 'rgba(244, 171, 180, 0.2)',
+    borderColor: "rgba(244, 171, 180, 0.2)",
     ...Platform.select({
-      ios: { shadowColor: '#F4ABB4', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12 },
+      ios: {
+        shadowColor: "#F4ABB4",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+      },
       android: { elevation: 3 },
     }),
   },
@@ -451,29 +586,45 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 14,
     backgroundColor: colors.pinkLight,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 14,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   cardAvatarImage: {
     width: 56,
     height: 56,
     borderRadius: 14,
   },
-  cardAvatarText: { fontSize: 20, fontWeight: '700', color: colors.pinkAccent, fontFamily },
+  cardAvatarText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.pinkAccent,
+    fontFamily,
+  },
   cardBody: { flex: 1, minWidth: 0 },
-  cardTitle: { fontSize: 15, fontFamily, fontWeight: '700', color: colors.text, marginBottom: 2 },
-  cardMeta: { fontSize: 12, fontFamily, color: colors.textMuted, marginBottom: 4 },
-  starRow: { flexDirection: 'row', marginBottom: 0 },
+  cardTitle: {
+    fontSize: 15,
+    fontFamily,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: 2,
+  },
+  cardMeta: {
+    fontSize: 12,
+    fontFamily,
+    color: colors.textMuted,
+    marginBottom: 4,
+  },
+  starRow: { flexDirection: "row", marginBottom: 0 },
   cardRight: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    alignItems: "flex-end",
+    justifyContent: "space-between",
     marginLeft: 8,
   },
   cardActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     marginBottom: 6,
   },
@@ -482,11 +633,16 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 10,
     backgroundColor: colors.pinkAccent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, fontFamily, color: colors.textSecondary },
-  empty: { fontFamily, color: colors.textMuted, textAlign: 'center', padding: 32 },
+  empty: {
+    fontFamily,
+    color: colors.textMuted,
+    textAlign: "center",
+    padding: 32,
+  },
 });

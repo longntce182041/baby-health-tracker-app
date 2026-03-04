@@ -5,26 +5,35 @@ export const createConsultation = async (data) => {
     const payload = {
       baby_id: data.baby_id,
       doctor_id: data.doctor_id,
-      schedule_id: data.schedule_id,
-      ...(data.note != null && data.note !== "" && { note: data.note }),
+      date: data.date,
+      start_time: data.start_time,
+      end_time: data.end_time,
+      ...(data.notes != null && data.notes !== "" && { notes: data.notes }),
+      ...(data.note != null && data.note !== "" && { notes: data.note }),
     };
+    console.log("createConsultation payload:", payload);
     const res = await api.post("/consultations", payload);
+    console.log("createConsultation response:", res);
+    // Map backend fields to frontend expectations
+    if (res?.data?.data) {
+      res.data.data = {
+        ...res.data.data,
+        id: res.data.data._id,
+      };
+    }
     return res.data;
   } catch (error) {
     console.warn(
-      "createConsultation error, dùng mock:",
-      error?.message || error,
+      "createConsultation error:",
+      error?.response?.data || error?.message || error,
     );
     return {
-      success: true,
-      data: {
-        id: "mock-" + Date.now(),
-        baby_id: data.baby_id,
-        doctor_id: data.doctor_id,
-        schedule_id: data.schedule_id,
-        status: "pending",
-        created_at: new Date().toISOString(),
-      },
+      success: false,
+      message:
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể đặt lịch tư vấn",
+      data: null,
     };
   }
 };

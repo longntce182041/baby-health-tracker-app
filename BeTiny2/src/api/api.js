@@ -2,7 +2,7 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Thay đổi URL theo môi trường
-const API_URL = "http:///10.10.106.222:3000/api"; // Hoặc IP server thực tế
+const API_URL = "http://10.10.106.222:3000/api"; // Hoặc IP server thực tế
 
 const api = axios.create({
   baseURL: API_URL,

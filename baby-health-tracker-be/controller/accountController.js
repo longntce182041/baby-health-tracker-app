@@ -22,9 +22,10 @@ const register = async (req, res) => {
       await parentService.deleteParent(existingAccount.parent_id);
     }
 
-    const newParent = await parentService.createParent({ full_name, phone });
+    const newParent = await parentService.createParent({ full_name });
     const hashedPassword = await bcrypt.hash(password, 10);
     const accountData = {
+      phone,
       email,
       password: hashedPassword,
       parent_id: newParent._id,
