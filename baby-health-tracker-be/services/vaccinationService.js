@@ -6,27 +6,41 @@ const createVaccination = async (vaccinationData) => {
 };
 
 const listVaccinations = async () => {
-    return await Vaccination.find().sort({ vaccine_name: 1, dose_number: 1 });
+    return await Vaccination.find()
+        .populate('location')
+        .sort({ vaccine_name: 1, dose_number: 1 });
 };
 
 const findVaccinationById = async (vaccinationId) => {
-    return await Vaccination.findById(vaccinationId);
+    return await Vaccination.findById(vaccinationId).populate('location');
 };
 
-const addLocations = async (vaccinationId, locations) => {
+const addLocations = async (vaccinationId, branchIds) => {
     return await Vaccination.findByIdAndUpdate(
         vaccinationId,
-        { $push: { location: { $each: locations } } },
+        { $addToSet: { location: { $each: branchIds } } },
         { new: true }
-    );
+    ).populate('location');
 };
 
-const removeLocationsByIds = async (vaccinationId, locationIds) => {
+const removeLocationsByIds = async (vaccinationId, branchIds) => {
     return await Vaccination.findByIdAndUpdate(
         vaccinationId,
-        { $pull: { location: { _id: { $in: locationIds } } } },
+        { $pull: { location: { $in: branchIds } } },
         { new: true }
-    );
+    ).populate('location');
+};
+
+const updateVaccinationById = async (vaccinationId, updateData) => {
+    return await Vaccination.findByIdAndUpdate(
+        vaccinationId,
+        updateData,
+        { new: true }
+    ).populate('location');
+};
+
+const deleteVaccinationById = async (vaccinationId) => {
+    return await Vaccination.findByIdAndDelete(vaccinationId);
 };
 
 module.exports = {
@@ -35,4 +49,6 @@ module.exports = {
     listVaccinations,
     addLocations,
     removeLocationsByIds,
+    updateVaccinationById,
+    deleteVaccinationById,
 };

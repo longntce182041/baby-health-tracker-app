@@ -17,9 +17,19 @@ const listDoctors = async (filter = {}) => {
     return await Doctor.find(filter).sort({ full_name: 1 });
 };
 
+const listDoctorsByIds = async (doctorIds) => {
+    return await Doctor.find({ _id: { $in: doctorIds } });
+};
+
+const updateDoctor = async (doctorId, updateData) => {
+    return await Doctor.findByIdAndUpdate(doctorId, updateData, { new: true });
+};
+
 module.exports = {
     createDoctor,
     findDoctorById,
     deleteDoctorById,
+    updateDoctor,
     listDoctors,
+    listDoctorsByIds,
 };

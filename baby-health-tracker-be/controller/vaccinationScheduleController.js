@@ -2,24 +2,21 @@ const babyService = require('../services/babyService');
 const vaccinationService = require('../services/vaccinationService');
 const vaccinationScheduleService = require('../services/vaccinationScheduleService');
 const notificationService = require('../services/notificationService');
+const hospitalBranchService = require('../services/hospitalBranchService');
 
 const bookVaccinationAppointment = async (req, res) => {
-    const { baby_id, vaccine_id, injection_date, location, notes } = req.body;
+    const { baby_id, vaccine_id, injection_date, location_id, notes } = req.body;
     const parentId = req.user ? req.user.parent_id : null;
 
     try {
-        if (!baby_id || !vaccine_id || !injection_date || !location) {
+        if (!baby_id || !vaccine_id || !injection_date || !location_id) {
             return res.status(400).json({
-                message: 'baby_id, vaccine_id, injection_date, and location are required',
+                message: 'baby_id, vaccine_id, injection_date, and location_id are required',
             });
         }
 
         if (!parentId) {
             return res.status(403).json({ message: 'Parent role required' });
-        }
-
-        if (!location.branch_name || !location.address) {
-            return res.status(400).json({ message: 'location must include branch_name and address' });
         }
 
         const baby = await babyService.findBabyById(baby_id);
@@ -38,6 +35,17 @@ const bookVaccinationAppointment = async (req, res) => {
             return res.status(404).json({ message: 'Vaccine not found' });
         }
 
+        const branch = await hospitalBranchService.findBranchById(location_id);
+        if (!branch) {
+            return res.status(404).json({ message: 'Hospital branch not found' });
+        }
+
+        const isBranchSupported = Array.isArray(vaccine.location)
+            && vaccine.location.some((item) => item && item._id && item._id.toString() === location_id.toString());
+        if (!isBranchSupported) {
+            return res.status(400).json({ message: 'Selected branch is not available for this vaccine' });
+        }
+
         const appointmentDate = new Date(injection_date);
         if (Number.isNaN(appointmentDate.getTime())) {
             return res.status(400).json({ message: 'Invalid injection_date format' });
@@ -51,7 +59,7 @@ const bookVaccinationAppointment = async (req, res) => {
             baby_id,
             vaccine_id,
             injection_date: appointmentDate,
-            location,
+            location_id,
             notes: normalizedNotes,
             status: 'scheduled',
         });
@@ -131,7 +139,7 @@ const viewVaccinationRecordDetails = async (req, res) => {
 
 const updateVaccinationRecord = async (req, res) => {
     const { id } = req.params;
-    const { injection_date, location, status, notes } = req.body;
+    const { injection_date, location_id, status, notes } = req.body;
     const parentId = req.user ? req.user.parent_id : null;
 
     try {
@@ -164,11 +172,27 @@ const updateVaccinationRecord = async (req, res) => {
             updateData.injection_date = parsedDate;
         }
 
-        if (location !== undefined) {
-            if (!location || !location.branch_name || !location.address) {
-                return res.status(400).json({ message: 'location must include branch_name and address' });
+        if (location_id !== undefined) {
+            const branch = await hospitalBranchService.findBranchById(location_id);
+            if (!branch) {
+                return res.status(404).json({ message: 'Hospital branch not found' });
             }
-            updateData.location = location;
+
+            const vaccineId = schedule.vaccine_id && schedule.vaccine_id._id
+                ? schedule.vaccine_id._id
+                : schedule.vaccine_id;
+            const vaccine = await vaccinationService.findVaccinationById(vaccineId);
+            if (!vaccine) {
+                return res.status(404).json({ message: 'Vaccine not found' });
+            }
+
+            const isBranchSupported = Array.isArray(vaccine.location)
+                && vaccine.location.some((item) => item && item._id && item._id.toString() === location_id.toString());
+            if (!isBranchSupported) {
+                return res.status(400).json({ message: 'Selected branch is not available for this vaccine' });
+            }
+
+            updateData.location_id = location_id;
         }
 
         if (status !== undefined) {
@@ -263,10 +287,10 @@ const viewVaccineList = async (req, res) => {
 };
 
 const viewVaccinationClinicsByVaccine = async (req, res) => {
-    const { id } = req.params;
+    const { vaccine_id } = req.params;
 
     try {
-        const vaccine = await vaccinationService.findVaccinationById(id);
+        const vaccine = await vaccinationService.findVaccinationById(vaccine_id);
         if (!vaccine) {
             return res.status(404).json({ message: 'Vaccine not found' });
         }

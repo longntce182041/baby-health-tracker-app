@@ -65,12 +65,12 @@ const scheduleConsultation = async (req, res) => {
       "Schedule found:",
       schedule
         ? {
-            _id: schedule._id,
-            date: schedule.date,
-            dateISO: schedule.date.toISOString(),
-            status: schedule.status,
-            slotsCount: schedule.slots.length,
-          }
+          _id: schedule._id,
+          date: schedule.date,
+          dateISO: schedule.date.toISOString(),
+          status: schedule.status,
+          slotsCount: schedule.slots.length,
+        }
         : "NO SCHEDULE",
     );
 
@@ -207,7 +207,110 @@ const listConsultationDoctors = async (req, res) => {
   }
 };
 
+const adminListConsultations = async (req, res) => {
+  try {
+    const { status, doctor_id, parent_id, baby_id } = req.query;
+    const filter = {};
+
+    if (status !== undefined) {
+      filter.status = status;
+    }
+
+    if (doctor_id !== undefined) {
+      filter.doctor_id = doctor_id;
+    }
+
+    if (parent_id !== undefined) {
+      filter.parent_id = parent_id;
+    }
+
+    if (baby_id !== undefined) {
+      filter.baby_id = baby_id;
+    }
+
+    const consultations = await consultationService.listConsultations(filter);
+
+    return res.status(200).json({
+      message: 'Consultation list fetched',
+      data: consultations,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const adminGetConsultationDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const consultation = await consultationService.findConsultationById(id);
+
+    if (!consultation) {
+      return res.status(404).json({ message: 'Consultation not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Consultation detail fetched',
+      data: consultation,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const adminAssignDoctorToConsultation = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { doctor_id } = req.body;
+
+    if (!doctor_id) {
+      return res.status(400).json({ message: 'doctor_id is required' });
+    }
+
+    const consultation = await consultationService.findConsultationById(id);
+    if (!consultation) {
+      return res.status(404).json({ message: 'Consultation not found' });
+    }
+
+    const doctor = await doctorService.findDoctorById(doctor_id);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+
+    const updated = await consultationService.updateConsultationById(id, {
+      doctor_id,
+    });
+
+    return res.status(200).json({
+      message: 'Doctor assigned to consultation successfully',
+      data: updated,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+const adminMonitorConsultationStatus = async (req, res) => {
+  try {
+    const summary = await consultationService.getConsultationStatusSummary();
+    const consultations = await consultationService.listConsultations({});
+
+    return res.status(200).json({
+      message: 'Consultation status monitored',
+      data: {
+        summary,
+        consultations,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 module.exports = {
   scheduleConsultation,
   listConsultationDoctors,
+  adminListConsultations,
+  adminGetConsultationDetail,
+  adminAssignDoctorToConsultation,
+  adminMonitorConsultationStatus,
 };
