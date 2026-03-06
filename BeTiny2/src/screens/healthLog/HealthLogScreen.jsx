@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, typography } from "../../theme";
 import { getHealthLogs } from "../../api/healthLogApi";
 import { MOCK_HEALTH_LOG_GROUPS } from "../../data/mockHealthLogs";
+import { getItem } from "../../storage";
 
 const { fontFamily } = typography;
 
@@ -34,15 +35,37 @@ function getCardBorderColor(m) {
 
 export default function HealthLogScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const babyId = route.params?.babyId;
+  const routeBabyId = route.params?.babyId;
   const canGoBack = navigation.canGoBack?.();
+  const [babyId, setBabyId] = useState(routeBabyId || null);
   const [momentGroups, setMomentGroups] = useState(MOCK_HEALTH_LOG_GROUPS);
   const [loading, setLoading] = useState(false);
 
+  // Load baby_id từ storage nếu không có trong route params
+  useEffect(() => {
+    const loadBabyId = async () => {
+      if (routeBabyId) {
+        console.log("HealthLogScreen - Using babyId from route:", routeBabyId);
+        setBabyId(routeBabyId);
+      } else {
+        const savedBabyId = await getItem("selected_baby_id");
+        console.log("HealthLogScreen - savedBabyId from storage:", savedBabyId);
+        if (savedBabyId) {
+          setBabyId(savedBabyId);
+        }
+      }
+    };
+    loadBabyId();
+  }, [routeBabyId]);
+
   const loadHealthLogs = async () => {
-    if (!babyId) return;
+    if (!babyId) {
+      console.log("HealthLogScreen - No babyId available");
+      return;
+    }
     try {
       setLoading(true);
+      console.log("HealthLogScreen - Fetching health logs for babyId:", babyId);
       const res = await getHealthLogs(babyId);
       console.log("HealthLogScreen getHealthLogs response:", res);
 
@@ -133,6 +156,13 @@ export default function HealthLogScreen({ route, navigation }) {
       setLoading(false);
     }
   };
+
+  // Load health logs khi babyId có sẵn
+  useEffect(() => {
+    if (babyId) {
+      loadHealthLogs();
+    }
+  }, [babyId]);
 
   useEffect(() => {
     const unsub = navigation.addListener("focus", () => {

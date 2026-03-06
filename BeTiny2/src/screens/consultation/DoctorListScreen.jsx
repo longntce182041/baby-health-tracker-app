@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { getDoctors } from "../../api/doctorApi";
+import { getConsultationDoctors } from "../../api/consultationApi";
 import { useAuth } from "../../context/AuthContext";
 import { colors, typography } from "../../theme";
 
@@ -67,22 +68,31 @@ export default function DoctorListScreen({ navigation }) {
     (async () => {
       setLoading(true);
       try {
-        const res = await getDoctors();
-        console.log("DoctorListScreen getDoctors response:", res);
-        // Backend returns {data: [...], message: "..."} without success field
-        if (Array.isArray(res?.data)) {
-          console.log("DoctorListScreen doctors data:", res.data);
-          setDoctors(res.data);
-        } else {
-          console.warn(
-            "DoctorListScreen: Expected array but got:",
-            typeof res?.data,
-          );
+        // Use consultation doctors endpoint to get only doctors with available schedules
+        const res = await getConsultationDoctors();
+        console.log("DoctorListScreen getConsultationDoctors response:", res);
+        // Backend returns {data: [...], message: "..."}
+        const doctorsList = Array.isArray(res?.data?.data)
+          ? res.data.data
+          : Array.isArray(res?.data)
+            ? res.data
+            : [];
+        console.log("DoctorListScreen doctors with schedules:", doctorsList);
+        setDoctors(doctorsList);
+      } catch (e) {
+        console.error(
+          "DoctorListScreen error, falling back to all doctors:",
+          e,
+        );
+        // Fallback to all doctors if consultation endpoint fails
+        try {
+          const res = await getDoctors();
+          const doctorsList = Array.isArray(res?.data) ? res.data : [];
+          setDoctors(doctorsList);
+        } catch (e2) {
+          console.error("DoctorListScreen getDoctors error:", e2);
           setDoctors([]);
         }
-      } catch (e) {
-        console.error("DoctorListScreen getDoctors error:", e);
-        setDoctors([]);
       }
       setLoading(false);
     })();

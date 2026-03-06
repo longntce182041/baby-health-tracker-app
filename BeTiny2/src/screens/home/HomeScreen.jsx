@@ -19,7 +19,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { getBabies } from "../../api/babyApi";
 import { getProfile } from "../../api/authApi";
-import { getItem } from "../../storage";
+import { getItem, setItem } from "../../storage";
 import {
   getBabyDisplayName,
   getBabyDisplayInitial,
@@ -173,7 +173,17 @@ export default function HomeScreen({ navigation }) {
         const res = await getBabies();
         const list = Array.isArray(res?.data?.data) ? res.data.data : [];
         setBabies(list);
-        setSelectedBaby(list.length > 0 ? list[0] : null);
+
+        // Load baby_id từ storage và tìm baby tương ứng
+        const savedBabyId = await getItem("selected_baby_id");
+        if (savedBabyId && list.length > 0) {
+          const found = list.find(
+            (b) => String(b.baby_id || b.id) === String(savedBabyId),
+          );
+          setSelectedBaby(found || list[0]);
+        } else {
+          setSelectedBaby(list.length > 0 ? list[0] : null);
+        }
       } catch (err) {
         console.error("Home getBabies:", err);
         setBabies([]);
@@ -194,7 +204,6 @@ export default function HomeScreen({ navigation }) {
       try {
         const res = await getProfile();
         if (res?.success && res?.data) {
-          d;
           const d = res.data;
           const name =
             d.fullName ?? d.full_name ?? user?.fullName ?? user?.full_name;
@@ -209,6 +218,18 @@ export default function HomeScreen({ navigation }) {
       }
     })();
   }, [isLoggedIn, user]);
+
+  // Lưu baby_id vào storage mỗi khi selectedBaby thay đổi
+  useEffect(() => {
+    if (selectedBaby) {
+      const babyId = selectedBaby.baby_id || selectedBaby.id;
+      if (babyId) {
+        setItem("selected_baby_id", String(babyId)).catch((err) =>
+          console.error("Failed to save baby_id:", err),
+        );
+      }
+    }
+  }, [selectedBaby]);
 
   const openBabyTab = () => {
     setDropdownVisible(false);

@@ -24,13 +24,6 @@ import { colors, typography } from "../../theme";
 
 const { fontFamily } = typography;
 
-const ROLES = [
-  { id: "mother", label: "Mẹ" },
-  { id: "father", label: "Bố" },
-  { id: "grandparent", label: "Ông / Bà" },
-  { id: "other", label: "Khác" },
-];
-
 export default function ProfileEditScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { user, isLoggedIn } = useAuth();
@@ -43,8 +36,6 @@ export default function ProfileEditScreen({ navigation }) {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [role, setRole] = useState("mother");
-  const [roleModalVisible, setRoleModalVisible] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -54,13 +45,7 @@ export default function ProfileEditScreen({ navigation }) {
     (async () => {
       setLoading(true);
       try {
-        const [res, storedRole] = await Promise.all([
-          getProfile(),
-          getItem("user_role"),
-        ]);
-        if (storedRole && ROLES.some((r) => r.label === storedRole)) {
-          setRole(ROLES.find((r) => r.label === storedRole)?.id || "mother");
-        }
+        const res = await getProfile();
         if (res?.data) {
           const d = res.data;
           setProfile({
@@ -70,9 +55,6 @@ export default function ProfileEditScreen({ navigation }) {
             wallet_points: d.wallet_points ?? d.wallet_point ?? 0,
             avatar_url: d.avatar_url ?? user?.avatar_url ?? "",
           });
-          if (d.role && ROLES.some((r) => r.label === d.role)) {
-            setRole(ROLES.find((r) => r.label === d.role)?.id || "mother");
-          }
         } else {
           setProfile((p) => ({
             ...p,
@@ -111,15 +93,10 @@ export default function ProfileEditScreen({ navigation }) {
 
     setSaving(true);
     try {
-      const r = ROLES.find((r) => r.id === role);
       await updateProfile({
         full_name: cleaned,
         phone: profile.phone,
-        role: r?.label ?? "Mẹ",
       });
-      if (r) {
-        await setItem("user_role", r.label);
-      }
       Alert.alert("Thành công", "Đã lưu thông tin");
     } catch (e) {
       Alert.alert("Lỗi", e?.message || "Không thể cập nhật");
@@ -208,57 +185,6 @@ export default function ProfileEditScreen({ navigation }) {
           </View>
         </View>
       </LinearGradient>
-
-      <Modal visible={roleModalVisible} transparent animationType="fade">
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setRoleModalVisible(false)}
-        >
-          <Pressable
-            style={styles.roleModalBox}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Text style={styles.roleModalTitle}>Chọn vai trò</Text>
-            {ROLES.map((r) => (
-              <TouchableOpacity
-                key={r.id}
-                style={[
-                  styles.roleOption,
-                  role === r.id && styles.roleOptionActive,
-                ]}
-                onPress={() => {
-                  setRole(r.id);
-                  setRoleModalVisible(false);
-                  setItem("user_role", r.label).catch(() => {});
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.roleOptionText,
-                    role === r.id && styles.roleOptionTextActive,
-                  ]}
-                >
-                  {r.label}
-                </Text>
-                {role === r.id && (
-                  <Ionicons
-                    name="checkmark"
-                    size={20}
-                    color={colors.pinkAccent}
-                  />
-                )}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.roleModalClose}
-              onPress={() => setRoleModalVisible(false)}
-            >
-              <Text style={styles.roleModalCloseText}>Đóng</Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       <ScrollView
         style={styles.scroll}
@@ -441,51 +367,6 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   inputReadOnly: { color: colors.textMuted },
-  inputLikeEmail: {},
-  roleSelect: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.white,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "rgba(244,171,180,0.3)",
-  },
-  roleSelectText: { fontSize: 16, fontFamily, color: colors.text },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    padding: 24,
-  },
-  roleModalBox: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: 20,
-  },
-  roleModalTitle: {
-    fontSize: 16,
-    fontFamily,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 12,
-  },
-  roleOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 4,
-  },
-  roleOptionActive: { backgroundColor: colors.pinkLight },
-  roleOptionText: { fontSize: 15, fontFamily, color: colors.text },
-  roleOptionTextActive: { fontWeight: "600", color: colors.pinkAccent },
-  roleModalClose: { marginTop: 12, paddingVertical: 12, alignItems: "center" },
-  roleModalCloseText: { fontSize: 15, fontFamily, color: colors.textMuted },
   walletCard: {
     flexDirection: "row",
     alignItems: "center",

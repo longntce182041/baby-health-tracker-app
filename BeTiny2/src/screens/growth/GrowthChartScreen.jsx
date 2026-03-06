@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { getBabies } from "../../api/babyApi";
 import { getGrowthRecords, createGrowthRecord } from "../../api/growthApi";
+import { getItem } from "../../storage";
 import { colors, typography } from "../../theme";
 import { ModernGrowthChart } from "./MordernGrowthChart";
 
@@ -39,6 +40,50 @@ function getAgeString(dateOfBirth) {
   if (years === 0) return `${monthsLeft} tháng tuổi`;
   if (monthsLeft === 0) return `${years} tuổi`;
   return `${years} tuổi ${monthsLeft} tháng`;
+}
+
+/**
+ * Tính tuổi của bé theo tháng, tự động chuyển sang năm khi đủ 12 tháng
+ * @param {string|Date} dateOfBirth - Ngày sinh của bé
+ * @returns {string} - Chuỗi tuổi dạng "X tháng tuổi" hoặc "Y tuổi Z tháng"
+ */
+function getAgeInMonths(dateOfBirth) {
+  if (!dateOfBirth) return "";
+
+  const birthDate = new Date(dateOfBirth);
+  const today = new Date();
+
+  // Tính tổng số tháng tuổi
+  let totalMonths =
+    (today.getFullYear() - birthDate.getFullYear()) * 12 +
+    (today.getMonth() - birthDate.getMonth());
+
+  // Điều chỉnh nếu chưa đến ngày sinh trong tháng hiện tại
+  if (today.getDate() < birthDate.getDate()) {
+    totalMonths--;
+  }
+
+  // Nếu âm hoặc 0, trả về 0 tháng
+  if (totalMonths <= 0) {
+    return "0 tháng tuổi";
+  }
+
+  // Nếu dưới 12 tháng, chỉ hiển thị số tháng
+  if (totalMonths < 12) {
+    return `${totalMonths} tháng tuổi`;
+  }
+
+  // Nếu từ 12 tháng trở lên, chuyển sang năm
+  const years = Math.floor(totalMonths / 12);
+  const remainingMonths = totalMonths % 12;
+
+  // Nếu đúng bội số 12 tháng (1 năm, 2 năm, ...)
+  if (remainingMonths === 0) {
+    return `${years} tuổi`;
+  }
+
+  // Có cả năm và tháng lẻ
+  return `${years} tuổi ${remainingMonths} tháng`;
 }
 
 const METRICS = [
@@ -179,17 +224,66 @@ export default function GrowthChartScreen({ navigation, route }) {
       console.log("GrowthChart - getBabies response:", res);
       const list = Array.isArray(res?.data?.data) ? res.data.data : [];
       setBabies(list);
-      const preselected = initialBabyId
-        ? list.find(
-            (b) =>
-              String(b.baby_id) === String(initialBabyId) ||
-              String(b.id) === String(initialBabyId),
-          )
-        : null;
-      const baby = preselected || (list.length > 0 ? list[0] : null);
+      console.log("GrowthChart - Total babies:", list.length);
+
+      // Ưu tiên: initialBabyId từ route params -> baby_id từ storage -> baby đầu tiên
+      let baby = null;
+      console.log("GrowthChart - initialBabyId from route:", initialBabyId);
+
+      if (initialBabyId) {
+        baby = list.find(
+          (b) =>
+            String(b.baby_id) === String(initialBabyId) ||
+            String(b.id) === String(initialBabyId),
+        );
+        console.log(
+          "GrowthChart - Found baby by initialBabyId:",
+          baby?.full_name,
+          baby?.baby_id || baby?.id,
+        );
+      }
+
+      // Nếu không có initialBabyId hoặc không tìm thấy, load từ storage
+      if (!baby) {
+        const savedBabyId = await getItem("selected_baby_id");
+        console.log("GrowthChart - savedBabyId from storage:", savedBabyId);
+
+        if (savedBabyId && list.length > 0) {
+          baby = list.find(
+            (b) => String(b.baby_id || b.id) === String(savedBabyId),
+          );
+          console.log(
+            "GrowthChart - Found baby by savedBabyId:",
+            baby?.full_name,
+            baby?.baby_id || baby?.id,
+          );
+        }
+      }
+
+      // Nếu vẫn không có, chọn baby đầu tiên
+      if (!baby && list.length > 0) {
+        baby = list[0];
+        console.log(
+          "GrowthChart - Using first baby:",
+          baby?.full_name,
+          baby?.baby_id || baby?.id,
+        );
+      }
+
+      console.log(
+        "GrowthChart - Final selected baby:",
+        baby?.full_name,
+        "ID:",
+        baby?.baby_id || baby?.id,
+      );
       setSelectedBaby(baby);
+
       if (baby) {
         const babyId = baby.baby_id || baby.id;
+        console.log(
+          "GrowthChart - Fetching growth records for baby_id:",
+          babyId,
+        );
         const growthRes = await getGrowthRecords(babyId);
         // Backend returns {data: {baby_id, points: [...]}}
         const records = Array.isArray(growthRes?.data?.data?.points)
@@ -329,7 +423,15 @@ export default function GrowthChartScreen({ navigation, route }) {
 
   const baby = selectedBaby || babies[0];
   const displayName = baby?.full_name || "Bé";
-  const ageStr = baby?.date_of_birth ? getAgeString(baby.date_of_birth) : "—";
+
+  // Sử dụng day_of_birth (field đúng từ backend)
+  const dateOfBirth = baby?.day_of_birth || baby?.date_of_birth;
+  const ageStr = dateOfBirth ? getAgeString(dateOfBirth) : "—";
+
+  // Log thông tin tuổi của bé
+  console.log("=== Baby Age Info ===");
+  console.log("Baby name:", displayName);
+  console.log("Date of birth:", dateOfBirth);
   const latestRecord =
     growthRecords.length > 0 ? growthRecords[growthRecords.length - 1] : null;
   const latestWeight = latestRecord?.weight != null ? latestRecord.weight : "—";
@@ -482,9 +584,8 @@ export default function GrowthChartScreen({ navigation, route }) {
                 </View>
                 <View style={styles.profileInfo}>
                   <Text style={styles.babyNameHeader} numberOfLines={1}>
-                    {displayName}
+                    {displayName} - {ageStr}
                   </Text>
-                  <Text style={styles.babyAgeGender}>{ageStr}</Text>
                   <View style={styles.statusPill}>
                     <Ionicons
                       name="checkmark-circle"

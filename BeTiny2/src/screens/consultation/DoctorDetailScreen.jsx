@@ -64,15 +64,35 @@ export default function DoctorDetailScreen({ route, navigation }) {
       try {
         const [docRes, schRes] = await Promise.all([
           getDoctorById(id),
-          getDoctorSchedules(id).catch(() => ({ success: false, data: [] })),
+          getDoctorSchedules(id).catch((err) => {
+            console.error("getDoctorSchedules error:", err);
+            return { data: [] };
+          }),
         ]);
         console.log("DoctorDetailScreen getDoctorById response:", docRes);
         console.log("DoctorDetailScreen getDoctorSchedules response:", schRes);
+
         const doc =
           docRes?.success && docRes?.data ? docRes.data : doctorParam || null;
+
+        console.log("DoctorDetailScreen doctor data:", {
+          hasDoc: !!doc,
+          fullName: doc?.full_name,
+          consultationFee: doc?.consultation_fee,
+          specialty: doc?.specialty,
+        });
+
         setDoctor(doc);
+
+        // getDoctorSchedules returns { success, data: [...], message }
         const scheduleFromApi =
           schRes?.success && Array.isArray(schRes?.data) ? schRes.data : [];
+
+        console.log("DoctorDetailScreen parsed schedules:", {
+          scheduleCount: scheduleFromApi.length,
+          firstSchedule: scheduleFromApi[0],
+        });
+
         const scheduleNested =
           doc && Array.isArray(doc.schedules) ? doc.schedules : [];
         setSchedules(
@@ -116,11 +136,16 @@ export default function DoctorDetailScreen({ route, navigation }) {
   const ratingValue = doctor.rating ?? doctor.avg_rating;
   const ratingDisplay =
     ratingValue != null && ratingValue !== "" ? ratingValue : "Chưa cập nhật";
-  const hasFee =
-    doctor.consultation_fee != null && doctor.consultation_fee !== "";
+
+  // If consultation_fee is not set, default to 10 points
+  const consultationFee =
+    doctor.consultation_fee != null && doctor.consultation_fee !== ""
+      ? doctor.consultation_fee
+      : 10;
+  const hasFee = consultationFee != null && consultationFee !== "";
   const consultationFeeDisplay =
-    hasFee && Number(doctor.consultation_fee) >= 0
-      ? `${doctor.consultation_fee} Điểm`
+    hasFee && Number(consultationFee) >= 0
+      ? `${consultationFee} Điểm`
       : "Chưa cập nhật";
   const hasSchedules = Array.isArray(schedules) && schedules.length > 0;
   const scheduleList = hasSchedules
@@ -153,6 +178,15 @@ export default function DoctorDetailScreen({ route, navigation }) {
     doctor.specialty && doctor.specialty.trim()
       ? doctor.specialty.trim()
       : "Chưa cập nhật";
+
+  console.log("DoctorDetailScreen render:", {
+    doctorId: id,
+    canBook,
+    hasFee,
+    consultationFee,
+    hasSchedules,
+    schedulesCount: schedules.length,
+  });
 
   return (
     <View style={styles.container}>
@@ -298,10 +332,20 @@ export default function DoctorDetailScreen({ route, navigation }) {
         </View>
         <TouchableOpacity
           style={[styles.btnMain, !canBook && styles.btnMainDisabled]}
-          onPress={() =>
-            canBook &&
-            navigation.navigate("Consultation", { doctorId: id, doctor })
-          }
+          onPress={() => {
+            if (canBook) {
+              console.log("Navigating to Consultation screen with:", {
+                doctorId: id,
+                doctor,
+              });
+              navigation.navigate("Consultation", { doctorId: id, doctor });
+            } else {
+              console.log("Cannot book - missing fee or schedules:", {
+                hasFee,
+                hasSchedules,
+              });
+            }
+          }}
           activeOpacity={0.85}
           disabled={!canBook}
         >

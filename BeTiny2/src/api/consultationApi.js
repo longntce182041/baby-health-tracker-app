@@ -11,22 +11,37 @@ export const createConsultation = async (data) => {
       ...(data.notes != null && data.notes !== "" && { notes: data.notes }),
       ...(data.note != null && data.note !== "" && { notes: data.note }),
     };
-    console.log("createConsultation payload:", payload);
+    console.log("createConsultation API payload:", payload);
     const res = await api.post("/consultations", payload);
-    console.log("createConsultation response:", res);
+    console.log("createConsultation API response status:", res.status);
+    console.log("createConsultation API response data:", res.data);
+
     // Map backend fields to frontend expectations
     if (res?.data?.data) {
       res.data.data = {
         ...res.data.data,
         id: res.data.data._id,
       };
+      return {
+        success: true,
+        message: res.data.message || "Consultation created successfully",
+        data: res.data.data,
+      };
     }
-    return res.data;
+
+    // If no data but status is success, still return the response
+    return {
+      success: true,
+      message: res.data.message || "Consultation created",
+      data: res.data,
+    };
   } catch (error) {
-    console.warn(
-      "createConsultation error:",
-      error?.response?.data || error?.message || error,
-    );
+    console.error("createConsultation API error:", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message,
+    });
+
     return {
       success: false,
       message:

@@ -19,7 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { getBabies } from "../../api/babyApi";
 import { getDoctorSchedules } from "../../api/doctorApi";
-import { createConsultation, getBookedSlots } from "../../api/consultationApi";
+import { createConsultation } from "../../api/consultationApi";
 import { useAuth } from "../../context/AuthContext";
 import { colors, typography } from "../../theme";
 
@@ -70,7 +70,6 @@ export default function ConsultationScreen({ route, navigation }) {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
-  const [bookedSlots, setBookedSlots] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -103,17 +102,6 @@ export default function ConsultationScreen({ route, navigation }) {
       setLoading(false);
     })();
   }, [isLoggedIn, doctorId]);
-
-  useEffect(() => {
-    if (!doctorId || !selectedDate) {
-      setBookedSlots([]);
-      return;
-    }
-    (async () => {
-      const list = await getBookedSlots(doctorId, selectedDate);
-      setBookedSlots(Array.isArray(list) ? list : []);
-    })();
-  }, [doctorId, selectedDate]);
 
   useEffect(() => {
     if (schedules.length === 0) return;
@@ -189,17 +177,32 @@ export default function ConsultationScreen({ route, navigation }) {
           : scheduleDate;
       return dateStr === selectedDate;
     });
+
+    console.log("Selected date:", selectedDate);
+    console.log(
+      "Found schedule for date:",
+      schedule
+        ? {
+            date: schedule.date,
+            status: schedule.status,
+            slots_count: schedule.slots?.length,
+          }
+        : "NO SCHEDULE FOUND",
+    );
+
     if (!schedule || !schedule.slots || !Array.isArray(schedule.slots))
       return [];
 
-    // Extract time slots from backend structure
+    // Extract time slots from backend structure with availability info
     return schedule.slots
       .filter((slot) => !slot.is_fully_booked)
-      .map((slot) => `${slot.start_time} - ${slot.end_time}`);
+      .map((slot) => ({
+        time: `${slot.start_time} - ${slot.end_time}`,
+        available_slots: slot.available_slots || 3 - (slot.booked_count || 0),
+        is_user_booked: slot.is_user_booked || false,
+      }));
   })();
   const isTwoSlots = timeSlots.length === 2;
-
-  const bookedTimes = bookedSlots;
 
   const openDatePicker = () => {
     const [y, m] = selectedDate.split("-").map(Number);
@@ -265,9 +268,10 @@ export default function ConsultationScreen({ route, navigation }) {
     return `${DAY_LABELS[d.getDay()]} ${ddm}`;
   })();
 
-  const handleSelectTime = (time) => {
-    if (bookedTimes.includes(time)) return;
-    setSelectedTimeSlot(time);
+  const handleSelectTime = (timeObj) => {
+    // Don't allow selecting slots that user already booked
+    if (timeObj.is_user_booked) return;
+    setSelectedTimeSlot(timeObj.time);
   };
 
   const isFormValid =
@@ -301,29 +305,90 @@ export default function ConsultationScreen({ route, navigation }) {
 
     setSaving(true);
     try {
+      // Ensure date is in correct format (YYYY-MM-DD)
+      const formattedDate = selectedDate.includes("T")
+        ? selectedDate.split("T")[0]
+        : selectedDate;
+
+      // Verify schedule exists for this date
+      const selectedSchedule = schedules.find((s) => {
+        const scheduleDate = s.date || s.available_date;
+        const dateStr =
+          typeof scheduleDate === "string"
+            ? scheduleDate.slice(0, 10)
+            : scheduleDate;
+        return dateStr === formattedDate;
+      });
+
+      console.log("Booking validation:", {
+        selectedDate: formattedDate,
+        scheduleFound: !!selectedSchedule,
+        scheduleStatus: selectedSchedule?.status,
+        totalSchedules: schedules.length,
+        scheduleDates: schedules.map((s) =>
+          (s.date || s.available_date)?.slice(0, 10),
+        ),
+      });
+
+      if (!selectedSchedule) {
+        Alert.alert(
+          "Lỗi",
+          "Không tìm thấy lịch cho ngày đã chọn. Vui lòng chọn ngày khác hoặc tải lại trang.",
+        );
+        return;
+      }
+
+      console.log("Creating consultation with:", {
+        baby_id: selectedBabyId,
+        doctor_id: doctorId,
+        date: formattedDate,
+        start_time: start_time.trim(),
+        end_time: end_time.trim(),
+        notes: reason.trim(),
+      });
+
       const result = await createConsultation({
         baby_id: selectedBabyId,
         doctor_id: doctorId,
-        date: selectedDate,
-        start_time: start_time,
-        end_time: end_time,
+        date: formattedDate,
+        start_time: start_time.trim(),
+        end_time: end_time.trim(),
         ...(reason.trim() && { notes: reason.trim() }),
       });
 
-      if (result?.success !== false) {
-        Alert.alert("Thành công", "Đã đặt lịch tư vấn");
-        navigation.goBack();
+      console.log("Create consultation result:", result);
+
+      if (result?.success !== false && result?.data) {
+        Alert.alert(
+          "Thành công",
+          "Đã đặt lịch tư vấn. Bác sĩ sẽ liên hệ với bạn qua tính năng nhắn tin.",
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.goBack(),
+            },
+          ],
+        );
       } else {
-        Alert.alert("Lỗi", result?.message || "Không thể đặt lịch");
+        const errorMsg =
+          result?.message || "Không thể đặt lịch. Vui lòng thử lại.";
+        console.error("Consultation booking failed:", {
+          success: result?.success,
+          message: result?.message,
+          data: result?.data,
+        });
+        Alert.alert("Lỗi", errorMsg);
       }
     } catch (e) {
       console.error("Book consultation error:", e);
-      Alert.alert(
-        "Lỗi",
-        e?.message || e?.response?.data?.message || "Không thể đặt lịch",
-      );
+      const errorMsg =
+        e?.response?.data?.message ||
+        e?.message ||
+        "Không thể đặt lịch. Vui lòng kiểm tra kết nối và thử lại.";
+      Alert.alert("Lỗi", errorMsg);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   if (!isLoggedIn) {
@@ -609,33 +674,48 @@ export default function ConsultationScreen({ route, navigation }) {
             </View>
           ) : (
             <>
-              <Text style={styles.timeHint}>Một số khung giờ đã được đặt</Text>
+              <Text style={styles.timeHint}>Chọn khung giờ phù hợp</Text>
               <View style={[styles.timeGrid, { gap: timeGap }]}>
-                {timeSlots.map((time) => {
-                  const selected = selectedTimeSlot === time;
-                  const booked = bookedTimes.includes(time);
+                {timeSlots.map((timeObj) => {
+                  const selected = selectedTimeSlot === timeObj.time;
+                  const userBooked = timeObj.is_user_booked;
                   return (
                     <TouchableOpacity
-                      key={time}
+                      key={timeObj.time}
                       style={[
                         styles.timeChip,
                         isTwoSlots && styles.timeChipFullWidth,
                         selected && styles.timeChipSelected,
-                        booked && styles.timeChipBooked,
+                        userBooked && styles.timeChipUserBooked,
                       ]}
-                      onPress={() => handleSelectTime(time)}
+                      onPress={() => handleSelectTime(timeObj)}
                       activeOpacity={0.8}
-                      disabled={booked}
+                      disabled={userBooked}
                     >
                       <Text
                         style={[
                           styles.timeChipText,
                           selected && styles.timeChipTextSelected,
-                          booked && styles.timeChipTextBooked,
+                          userBooked && styles.timeChipTextBooked,
                         ]}
                       >
-                        {time}
+                        {timeObj.time}
                       </Text>
+                      {timeObj.available_slots != null && !userBooked && (
+                        <Text
+                          style={[
+                            styles.timeChipSlotsText,
+                            selected && styles.timeChipSlotsTextSelected,
+                          ]}
+                        >
+                          ({timeObj.available_slots}/3 còn trống)
+                        </Text>
+                      )}
+                      {userBooked && (
+                        <Text style={styles.timeChipUserBookedText}>
+                          Đã đặt
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -1030,6 +1110,26 @@ const styles = StyleSheet.create({
   },
   timeChipTextSelected: { color: colors.white },
   timeChipTextBooked: { color: colors.textMuted },
+  timeChipUserBooked: {
+    backgroundColor: "#FFF3E0",
+    borderColor: "#FFB74D",
+  },
+  timeChipSlotsText: {
+    fontSize: 11,
+    fontFamily,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
+  timeChipSlotsTextSelected: {
+    color: "rgba(255,255,255,0.9)",
+  },
+  timeChipUserBookedText: {
+    fontSize: 11,
+    fontFamily,
+    color: "#F57C00",
+    marginTop: 4,
+    fontWeight: "600",
+  },
   btnConfirm: {
     borderRadius: 20,
     overflow: "hidden",

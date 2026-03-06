@@ -50,21 +50,32 @@ export const getDoctorById = async (id) => {
 export const getDoctorSchedules = async (doctorId, params = {}) => {
   try {
     const res = await api.get(`/doctors/${doctorId}/schedule`, { params });
-    console.log("getDoctorSchedules response:", res);
+    console.log("getDoctorSchedules API response:", res);
+    console.log("getDoctorSchedules API response.data:", res.data);
+
+    // Backend returns { message, doctor, data: [...] }
     // Map backend fields to frontend expectations
-    if (res?.data?.data) {
-      res.data.data = res.data.data.map((schedule) => ({
+    if (res?.data?.data && Array.isArray(res.data.data)) {
+      const mappedData = res.data.data.map((schedule) => ({
         ...schedule,
-        id: schedule._id,
-        schedule_id: schedule._id,
+        id: schedule._id || schedule.id,
+        schedule_id: schedule._id || schedule.id,
         available_date: schedule.date,
       }));
+      console.log("getDoctorSchedules mapped data:", mappedData);
+      return {
+        success: true,
+        data: mappedData,
+        message: res.data.message,
+      };
     }
+
+    // Return as-is if data structure is unexpected
     return res.data;
   } catch (error) {
-    console.warn(
-      "getDoctorSchedules error, dùng mock:",
-      error?.message || error,
+    console.error(
+      "getDoctorSchedules error:",
+      error?.response?.data || error?.message || error,
     );
     const doctor = getMockDoctorById(doctorId);
     const list = Array.isArray(doctor?.schedules)
