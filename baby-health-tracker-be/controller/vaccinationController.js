@@ -1,7 +1,22 @@
 const vaccinationService = require('../services/vaccinationService');
+const hospitalBranchService = require('../services/hospitalBranchService');
+
+const validateLocationIds = async (locationIds) => {
+    if (!Array.isArray(locationIds) || locationIds.length === 0) {
+        return { ok: false, message: 'location_ids must be a non-empty array of branch IDs' };
+    }
+
+    const uniqueIds = [...new Set(locationIds.map((id) => id.toString()))];
+    const branches = await hospitalBranchService.findBranchesByIds(uniqueIds);
+    if (branches.length !== uniqueIds.length) {
+        return { ok: false, message: 'One or more branch IDs are invalid' };
+    }
+
+    return { ok: true };
+};
 
 const addVaccine = async (req, res) => {
-    const { vaccine_name, dose_number, price, location } = req.body;
+    const { vaccine_name, dose_number, price, location_ids } = req.body;
 
     try {
         if (!vaccine_name || dose_number === undefined || price === undefined) {
@@ -10,28 +25,22 @@ const addVaccine = async (req, res) => {
             });
         }
 
-        if (!Array.isArray(location) || location.length === 0) {
+        const locationValidation = await validateLocationIds(location_ids);
+        if (!locationValidation.ok) {
             return res.status(400).json({
-                message: 'location must be a non-empty array of branch_name and address',
+                message: locationValidation.message,
             });
-        }
-
-        for (const item of location) {
-            if (!item || !item.branch_name || !item.address) {
-                return res.status(400).json({
-                    message: 'Each location must include branch_name and address',
-                });
-            }
         }
 
         const created = await vaccinationService.createVaccination({
             vaccine_name,
             dose_number,
             price,
-            location,
+            location: location_ids,
         });
 
-        return res.status(201).json({ message: 'Vaccination created', data: created });
+        const populated = await vaccinationService.findVaccinationById(created._id);
+        return res.status(201).json({ message: 'Vaccination created', data: populated });
     } catch (error) {
         return res.status(500).json({ message: 'Server error', error: error.message });
     }
@@ -51,13 +60,10 @@ const updateVaccineLocations = async (req, res) => {
             return res.status(400).json({ message: 'add or remove_ids must be provided' });
         }
 
-        if (Array.isArray(add)) {
-            for (const item of add) {
-                if (!item || !item.branch_name || !item.address) {
-                    return res.status(400).json({
-                        message: 'Each added location must include branch_name and address',
-                    });
-                }
+        if (Array.isArray(add) && add.length > 0) {
+            const addValidation = await validateLocationIds(add);
+            if (!addValidation.ok) {
+                return res.status(400).json({ message: addValidation.message });
             }
         }
 
@@ -76,7 +82,71 @@ const updateVaccineLocations = async (req, res) => {
     }
 };
 
+const adminListVaccines = async (req, res) => {
+    try {
+        const vaccines = await vaccinationService.listVaccinations();
+        return res.status(200).json({ message: 'Vaccine list fetched', data: vaccines });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+const adminAddVaccine = async (req, res) => {
+    return addVaccine(req, res);
+};
+
+const adminUpdateVaccine = async (req, res) => {
+    const { id } = req.params;
+    const { vaccine_name, dose_number, price, location_ids } = req.body;
+
+    try {
+        const vaccine = await vaccinationService.findVaccinationById(id);
+        if (!vaccine) {
+            return res.status(404).json({ message: 'Vaccine not found' });
+        }
+
+        const updateData = {};
+        if (vaccine_name !== undefined) updateData.vaccine_name = vaccine_name;
+        if (dose_number !== undefined) updateData.dose_number = dose_number;
+        if (price !== undefined) updateData.price = price;
+
+        if (location_ids !== undefined) {
+            const locationValidation = await validateLocationIds(location_ids);
+            if (!locationValidation.ok) {
+                return res.status(400).json({ message: locationValidation.message });
+            }
+
+            updateData.location = location_ids;
+        }
+
+        const updated = await vaccinationService.updateVaccinationById(id, updateData);
+        return res.status(200).json({ message: 'Vaccine updated successfully', data: updated });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+const adminDeleteVaccine = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const vaccine = await vaccinationService.findVaccinationById(id);
+        if (!vaccine) {
+            return res.status(404).json({ message: 'Vaccine not found' });
+        }
+
+        await vaccinationService.deleteVaccinationById(id);
+        return res.status(200).json({ message: 'Vaccine deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
     addVaccine,
     updateVaccineLocations,
+    adminListVaccines,
+    adminAddVaccine,
+    adminUpdateVaccine,
+    adminDeleteVaccine,
 };
