@@ -9,6 +9,7 @@ const userController = require("../controller/userController");
 const consultationController = require("../controller/consultationController");
 const conversationController = require("../controller/conversationController");
 const vaccinationScheduleController = require("../controller/vaccinationScheduleController");
+const paymentRoutes = require("./payment");
 const {
   authenticateToken,
   requireParent,
@@ -239,5 +240,8 @@ router.get(
   requireParent,
   vaccinationScheduleController.viewVaccinationClinicsByVaccine,
 );
+
+// Payment routes
+router.use("/payments", paymentRoutes);
 
 module.exports = router;
