@@ -81,6 +81,21 @@ export const AuthProvider = ({ children }) => {
     setIsLoggedIn(true);
   };
 
+  // Refresh user data (e.g., after payment to get updated points)
+  const refreshUser = async () => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      if (token) {
+        const response = await authApi.getProfile();
+        setUser(response.data);
+        return response.data;
+      }
+    } catch (error) {
+      console.error("Failed to refresh user:", error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -91,6 +106,7 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         setAuthUser,
+        refreshUser,
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,24 +7,41 @@ import {
   StyleSheet,
   Platform,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { colors, typography } from "../../theme";
+import { createPayment } from "../../api/paymentApi";
+import { getItem } from "../../storage";
 
 const { fontFamily } = typography;
 const PACKAGES = [
-  { id: "p1", label: "Gói cơ bản", points: 50, price: "100.000đ" },
+  {
+    id: "p1",
+    label: "Gói cơ bản",
+    points: 50,
+    price: 100000,
+    priceText: "100.000đ",
+  },
   {
     id: "p2",
     label: "Gói tiêu chuẩn",
     points: 120,
-    price: "200.000đ",
+    price: 200000,
+    priceText: "200.000đ",
     popular: true,
   },
-  { id: "p3", label: "Gói cao cấp", points: 300, price: "500.000đ" },
+  {
+    id: "p3",
+    label: "Gói cao cấp",
+    points: 300,
+    price: 500000,
+    priceText: "500.000đ",
+  },
 ];
 
 const PAYMENT_ICONS = [
@@ -36,8 +53,70 @@ const PAYMENT_ICONS = [
 
 export default function TopUpPointsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [selectedPackageId, setSelectedPackageId] = useState("p2");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [token, setToken] = useState(null);
+  const [accountId, setAccountId] = useState(null);
+
+  // Load token and account ID from storage when component mounts
+  useEffect(() => {
+    const loadAuthData = async () => {
+      try {
+        const accessToken = await getItem("accessToken");
+        setToken(accessToken);
+
+        // Account ID is available from user object
+        if (user?._id) {
+          setAccountId(user._id);
+          console.log("Token:", accessToken);
+          console.log("Account ID:", user._id);
+        }
+      } catch (error) {
+        console.error("Error loading auth data:", error);
+      }
+    };
+
+    loadAuthData();
+  }, [user]);
+
+  const handlePayment = async () => {
+    try {
+      setIsProcessing(true);
+
+      const selectedPackage = PACKAGES.find(
+        (pkg) => pkg.id === selectedPackageId,
+      );
+      if (!selectedPackage) {
+        Alert.alert("Lỗi", "Vui lòng chọn gói điểm");
+        return;
+      }
+
+      // Create payment link with PayOS
+      const response = await createPayment(selectedPackageId, "payos");
+
+      if (response.success && response.data.payment_link) {
+        // Navigate to WebView screen with payment URL
+        navigation.navigate("PaymentWebView", {
+          paymentUrl: response.data.payment_link,
+          orderCode: response.data.order_code,
+        });
+        setIsProcessing(false);
+      } else {
+        Alert.alert("Lỗi", response.message || "Không thể tạo link thanh toán");
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      Alert.alert(
+        "Lỗi thanh toán",
+        error.response?.data?.message ||
+          error.message ||
+          "Có lỗi xảy ra khi tạo thanh toán. Vui lòng thử lại.",
+      );
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -72,7 +151,6 @@ export default function TopUpPointsScreen({ navigation }) {
           </View>
         </View>
       </LinearGradient>
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -116,7 +194,7 @@ export default function TopUpPointsScreen({ navigation }) {
                   <Text style={styles.pkgPoints}>{pkg.points} điểm</Text>
                 </View>
                 <View style={styles.pkgPriceWrap}>
-                  <Text style={styles.pkgPrice}>{pkg.price}</Text>
+                  <Text style={styles.pkgPrice}>{pkg.priceText}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -143,7 +221,8 @@ export default function TopUpPointsScreen({ navigation }) {
         <TouchableOpacity
           style={styles.btnContinue}
           activeOpacity={0.85}
-          onPress={() => {}}
+          onPress={handlePayment}
+          disabled={isProcessing}
         >
           <LinearGradient
             colors={[colors.pinkAccent, "#E895A0"]}
@@ -151,7 +230,11 @@ export default function TopUpPointsScreen({ navigation }) {
             end={{ x: 1, y: 0.5 }}
             style={styles.btnContinueGrad}
           >
-            <Text style={styles.btnContinueText}>TIẾP TỤC THANH TOÁN</Text>
+            {isProcessing ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.btnContinueText}>TIẾP TỤC THANH TOÁN</Text>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
