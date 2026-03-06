@@ -8,7 +8,9 @@ const healthLogController = require("../controller/healthLogController");
 const userController = require("../controller/userController");
 const consultationController = require("../controller/consultationController");
 const conversationController = require("../controller/conversationController");
+const vaccinationController = require("../controller/vaccinationController");
 const vaccinationScheduleController = require("../controller/vaccinationScheduleController");
+const hospitalBranchController = require("../controller/hospitalBranchController");
 const {
   authenticateToken,
   requireParent,
@@ -189,6 +191,103 @@ router.put(
   "/profile/password",
   authenticateToken,
   userController.changePassword,
+);
+
+router.get(
+  "/admin/parents",
+  userController.adminListParents,
+);
+router.get(
+  "/admin/parents/:account_id",
+  userController.adminGetParentDetail,
+);
+router.put(
+  "/admin/parents/:account_id",
+  userController.adminUpdateParent,
+);
+router.patch(
+  "/admin/parents/:account_id/status",
+  userController.adminChangeParentStatus,
+);
+
+router.get(
+  "/admin/doctors",
+  userController.adminListDoctors,
+);
+router.get(
+  "/admin/doctors/:account_id",
+  userController.adminGetDoctorDetail,
+);
+router.post(
+  "/admin/doctors",
+  userController.adminAddDoctor,
+);
+router.put(
+  "/admin/doctors/:account_id",
+  userController.adminUpdateDoctor,
+);
+router.patch(
+  "/admin/doctors/:account_id/status",
+  userController.adminChangeDoctorStatus,
+);
+
+router.get(
+  "/admin/consultations",
+  consultationController.adminListConsultations,
+);
+router.get(
+  "/admin/consultations/status",
+  consultationController.adminMonitorConsultationStatus,
+);
+router.get(
+  "/admin/consultations/:id",
+  consultationController.adminGetConsultationDetail,
+);
+router.patch(
+  "/admin/consultations/:id/assign-doctor",
+  consultationController.adminAssignDoctorToConsultation,
+);
+
+router.get(
+  "/admin/vaccines",
+  vaccinationController.adminListVaccines,
+);
+router.post(
+  "/admin/vaccines",
+  vaccinationController.adminAddVaccine,
+);
+router.put(
+  "/admin/vaccines/:id",
+  vaccinationController.adminUpdateVaccine,
+);
+router.patch(
+  "/admin/vaccines/:id/locations",
+  vaccinationController.updateVaccineLocations,
+);
+router.delete(
+  "/admin/vaccines/:id",
+  vaccinationController.adminDeleteVaccine,
+);
+
+router.get(
+  "/admin/hospital-branches",
+  hospitalBranchController.listHospitalBranches,
+);
+router.get(
+  "/admin/hospital-branches/:id",
+  hospitalBranchController.getHospitalBranchDetail,
+);
+router.post(
+  "/admin/hospital-branches",
+  hospitalBranchController.addHospitalBranch,
+);
+router.put(
+  "/admin/hospital-branches/:id",
+  hospitalBranchController.updateHospitalBranch,
+);
+router.delete(
+  "/admin/hospital-branches/:id",
+  hospitalBranchController.deleteHospitalBranch,
 );
 
 router.post(

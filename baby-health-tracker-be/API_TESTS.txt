@@ -357,3 +357,198 @@ Note: This API creates both doctor profile and doctor account (role = doctor).
   GET /doctors/:id
   Note: Returns doctor's public profile (name, avatar, specialty, experience) for viewing by parents
   without sensitive information like email and phone.
+
+  36) Admin - View parent list
+  GET /admin/parents
+  Note: Returns all parent accounts with linked parent profile.
+        No backend role check is applied on this endpoint.
+
+  37) Admin - View parent details
+  GET /admin/parents/:account_id
+  Note: account_id is the account _id (role = parent), not parent_id.
+
+  38) Admin - Update parent information
+  PUT /admin/parents/:account_id
+  {
+    "phone": "0901234567",
+    "full_name": "Updated Parent Name",
+    "avatar_url": "https://example.com/parent-updated.png"
+  }
+  Note: You can update account phone and parent profile fields in one request.
+
+  39) Admin - Change parent account status
+  PATCH /admin/parents/:account_id/status
+  {
+    "status": false
+  }
+  Note: status accepts true/false.
+
+  40) Admin - View doctor list
+  GET /admin/doctors
+  Note: Returns all doctor accounts with linked doctor profile.
+
+  41) Admin - View doctor details
+  GET /admin/doctors/:account_id
+  Note: account_id is the account _id (role = doctor), not doctor_id.
+
+  42) Admin - Add doctor account
+  POST /admin/doctors
+  {
+    "email": "doctor2@example.com",
+    "password": "123456",
+    "phone": "0901234567",
+    "full_name": "Dr. Tran Thi C",
+    "avatar_url": "https://example.com/doctor2.png",
+    "specialty": "Pediatrics",
+    "experience": [
+      {
+        "certificate_name": "Pediatrics Specialist",
+        "certificate_url": "https://example.com/certificates/pediatrics-specialist.pdf"
+      }
+    ]
+  }
+  Note: Creates both doctor profile and doctor account (role = doctor).
+
+  43) Admin - Update doctor information
+  PUT /admin/doctors/:account_id
+  {
+    "phone": "0907777666",
+    "full_name": "Dr. Tran Thi C Updated",
+    "avatar_url": "https://example.com/doctor2-updated.png",
+    "specialty": "Neonatology",
+    "experience": [
+      {
+        "certificate_name": "Neonatology Certificate",
+        "certificate_url": "https://example.com/certificates/neonatology.pdf"
+      }
+    ]
+  }
+  Note: You can update account phone and doctor profile fields in one request.
+
+  44) Admin - Change doctor account status
+  PATCH /admin/doctors/:account_id/status
+  {
+    "status": true
+  }
+  Note: status accepts true/false.
+
+  45) Admin - View consultation list
+  GET /admin/consultations
+  Optional query: status, doctor_id, parent_id, baby_id
+  Example:
+  GET /admin/consultations?status=scheduled
+
+  46) Admin - View consultation details
+  GET /admin/consultations/:id
+
+  47) Admin - Assign doctor to consultation
+  PATCH /admin/consultations/:id/assign-doctor
+  {
+    "doctor_id": "<doctor_id>"
+  }
+
+  48) Admin - Monitor consultation status
+  GET /admin/consultations/status
+  Note: Returns summary counts by status and full consultation list.
+
+  49) Admin - View vaccine list
+  GET /admin/vaccines
+
+  50) Admin - Add vaccine
+  POST /admin/vaccines
+  {
+    "vaccine_name": "Hexaxim",
+    "dose_number": 1,
+    "price": 950000,
+    "location_ids": ["<branch_id_1>", "<branch_id_2>"]
+  }
+
+  51) Admin - Update vaccine information
+  PUT /admin/vaccines/:id
+  {
+    "vaccine_name": "Hexaxim Updated",
+    "dose_number": 2,
+    "price": 1050000,
+    "location_ids": ["<branch_id_2>"]
+  }
+
+  52) Admin - Delete vaccine
+  DELETE /admin/vaccines/:id
+
+  52.5) Admin - Update vaccine branches (add/remove)
+  PATCH /admin/vaccines/:id/locations
+  {
+    "add": ["<branch_id_3>"],
+    "remove_ids": ["<branch_id_1>"]
+  }
+  Note: add/remove_ids are hospital branch IDs.
+
+  53) Admin - Add hospital branch
+  POST /admin/hospital-branches
+  {
+    "branch_name": "VNVC Quan 1",
+    "address": "123 Le Loi, Quan 1, TP.HCM"
+  }
+
+  54) Admin - View hospital branch list
+  GET /admin/hospital-branches
+
+  55) Admin - View hospital branch details
+  GET /admin/hospital-branches/:id
+
+  56) Admin - Update hospital branch
+  PUT /admin/hospital-branches/:id
+  {
+    "branch_name": "VNVC Quan 1 Updated",
+    "address": "456 Nguyen Hue, Quan 1, TP.HCM"
+  }
+
+  57) Admin - Delete hospital branch
+  DELETE /admin/hospital-branches/:id
+
+  58) Book vaccination appointment (auth required, parent role)
+  POST /vaccination-schedules
+  {
+    "baby_id": "<baby_id>",
+    "vaccine_id": "<vaccine_id>",
+    "injection_date": "2026-03-10T09:00:00.000Z",
+    "location_id": "<branch_id>",
+    "notes": [
+      {
+        "content": "Bring vaccine record book"
+      }
+    ]
+  }
+  Note: location_id must belong to the selected vaccine's location list.
+
+  59) View vaccination schedules by baby (auth required, parent role)
+  GET /vaccination-schedules?baby_id=<baby_id>
+
+  60) View vaccination record details (auth required, parent role)
+  GET /vaccination-schedules/:id
+
+  61) Update vaccination record (auth required, parent role)
+  PUT /vaccination-schedules/:id
+  {
+    "injection_date": "2026-03-15T09:00:00.000Z",
+    "location_id": "<branch_id>",
+    "status": "scheduled",
+    "notes": [
+      {
+        "content": "Updated note"
+      }
+    ]
+  }
+
+  62) Mark vaccination completed (auth required, parent role)
+  PATCH /vaccination-schedules/:id/complete
+
+  63) View vaccination notes (auth required, parent role)
+  GET /vaccination-schedules/:id/notes
+
+  64) View vaccine list (auth required, parent role)
+  GET /vaccinations
+  Note: Returns vaccine list with populated hospital branches in location.
+
+  65) View vaccination branches by vaccine (auth required, parent role)
+  GET /vaccinations/:vaccine_id/locations
