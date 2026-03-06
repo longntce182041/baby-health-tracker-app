@@ -10,7 +10,7 @@
     "assetBundlePatterns": ["**/*"],
     "ios": { "supportsTablet": true, "bundleIdentifier": "com.betiny.app" },
     "android": { "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#ffffff" }, "package": "com.betiny.app" },
-    "extra": { "apiUrl": "http://localhost:5000/api" },
+    "extra": { "apiUrl": "http://localhost:3000/api" },
     "scheme": "be-tiny"
   }
 }
