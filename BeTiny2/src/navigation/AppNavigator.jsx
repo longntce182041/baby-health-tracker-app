@@ -36,6 +36,7 @@ import NotificationScreen from "../screens/notification/NotificationScreen";
 import PackageListScreen from "../screens/account/PackageListScreen";
 import TransactionScreen from "../screens/account/TransactionScreen";
 import TopUpPointsScreen from "../screens/account/TopUpPointsScreen";
+import PaymentWebViewScreen from "../screens/payment/PaymentWebViewScreen";
 import VerifyOTPScreen from "../screens/auth/VerifyOTPScreen";
 
 const Stack = createNativeStackNavigator();
@@ -236,6 +237,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="TopUpPoints"
           component={TopUpPointsScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="PaymentWebView"
+          component={PaymentWebViewScreen}
           options={{ headerShown: false }}
         />
         <Stack.Screen

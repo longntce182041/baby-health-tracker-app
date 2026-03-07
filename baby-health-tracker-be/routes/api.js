@@ -10,6 +10,7 @@ const consultationController = require("../controller/consultationController");
 const conversationController = require("../controller/conversationController");
 const vaccinationController = require("../controller/vaccinationController");
 const vaccinationScheduleController = require("../controller/vaccinationScheduleController");
+const paymentRoutes = require("./payment");
 const hospitalBranchController = require("../controller/hospitalBranchController");
 const pointPackageController = require("../controller/pointPackageController");
 const {

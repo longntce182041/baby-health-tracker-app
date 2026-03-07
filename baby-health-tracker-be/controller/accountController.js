@@ -47,8 +47,8 @@ const register = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: "nguyenphamtiendat1232003@gmail.com",
-        pass: "wlud knmw fegd ekvr",
+        user: "betiny10092005@gmail.com",
+        pass: "srii tkdr scdj jxpo",
       },
     });
     await transporter.sendMail({
@@ -174,8 +174,8 @@ const forgotPassword = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: "nguyenphamtiendat1232003@gmail.com",
-        pass: "wlud knmw fegd ekvr",
+        user: "betiny10092005@gmail.com",
+        pass: "srii tkdr scdj jxpo",
       },
     });
     await transporter.sendMail({
