@@ -11,6 +11,7 @@ const conversationController = require("../controller/conversationController");
 const vaccinationController = require("../controller/vaccinationController");
 const vaccinationScheduleController = require("../controller/vaccinationScheduleController");
 const hospitalBranchController = require("../controller/hospitalBranchController");
+const pointPackageController = require("../controller/pointPackageController");
 const {
   authenticateToken,
   requireParent,
@@ -337,6 +338,28 @@ router.get(
   authenticateToken,
   requireParent,
   vaccinationScheduleController.viewVaccinationClinicsByVaccine,
+);
+
+// Point Package routes (no authentication required)
+router.post(
+  "/point-packages",
+  pointPackageController.createPointPackage,
+);
+router.get(
+  "/point-packages",
+  pointPackageController.listPointPackages,
+);
+router.get(
+  "/point-packages/:id",
+  pointPackageController.getPointPackageById,
+);
+router.put(
+  "/point-packages/:id",
+  pointPackageController.updatePointPackage,
+);
+router.delete(
+  "/point-packages/:id",
+  pointPackageController.deletePointPackage,
 );
 
 module.exports = router;
