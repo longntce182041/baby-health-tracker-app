@@ -12,6 +12,10 @@ const updateParentById = async (parentId, updateData) => {
     return await Parent.findByIdAndUpdate(parentId, updateData, { new: true });
 }
 
+const listParentsByIds = async (parentIds) => {
+    return await Parent.find({ _id: { $in: parentIds } });
+}
+
 const deleteParent = async (parentId) => {
     return await Parent.findByIdAndDelete(parentId);
 }
@@ -20,5 +24,6 @@ module.exports = {
     createParent,
     findParentById,
     updateParentById,
+    listParentsByIds,
     deleteParent
 }
