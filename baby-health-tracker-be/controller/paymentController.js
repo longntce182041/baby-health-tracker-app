@@ -1,4 +1,5 @@
 const paymentService = require("../services/paymentService");
+const TransactionHistory = require("../models/transaction_history");
 
 /**
  * Create payment link
@@ -6,7 +7,7 @@ const paymentService = require("../services/paymentService");
  */
 async function createPayment(req, res) {
   try {
-    const { package_id, payment_method } = req.body;
+    const { package_id, payment_method, points, amount } = req.body;
     const parent_id = req.user.parent_id; // From auth middleware
     const account_id = req.user.account_id; // From auth middleware
 
@@ -23,6 +24,20 @@ async function createPayment(req, res) {
       package_id,
       payment_method || "payos",
     );
+
+    // // 4. Create transaction record
+    // const transaction = new TransactionHistory({
+    //   point_package_id: package_id,
+    //   parent_id,
+    //   account_id,
+    //   points,
+    //   amount,
+    //   payment_method,
+    //   status: "pending",
+    //   description: `Nạp ${points} điểm`,
+    // });
+
+    // await transaction.save();
 
     res.status(200).json({
       success: true,
@@ -136,10 +151,46 @@ async function getHistory(req, res) {
   }
 }
 
+/**
+ * Update transaction status
+ * PUT /api/payments/status/:transactionId
+ */
+async function updateStatus(req, res) {
+  try {
+    const { transactionId } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
+    const transaction = await paymentService.updateTransactionStatus(
+      transactionId,
+      status,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Transaction status updated successfully",
+      data: transaction,
+    });
+  } catch (error) {
+    console.error("Update status error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update transaction status",
+    });
+  }
+}
+
 module.exports = {
   createPayment,
   handleWebhook,
   checkStatus,
   cancelPayment,
   getHistory,
+  updateStatus,
 };

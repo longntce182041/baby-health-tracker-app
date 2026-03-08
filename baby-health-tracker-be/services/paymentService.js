@@ -88,6 +88,7 @@ async function createPaymentLink(
     await transaction.save();
 
     return {
+      transaction_id: transaction._id,
       success: true,
       transaction_id: transaction._id,
       order_code: orderCode,
@@ -250,10 +251,57 @@ async function getTransactionHistory(parentId) {
   }
 }
 
+/**
+ * Update transaction status
+ * @param {String} transactionId - Transaction ID
+ * @param {String} newStatus - New status (pending, completed, failed, cancelled)
+ * @returns {Object} Updated transaction
+ */
+async function updateTransactionStatus(transactionId, newStatus) {
+  try {
+    const validStatuses = ["pending", "completed", "failed", "cancelled"];
+    if (!validStatuses.includes(newStatus)) {
+      throw new Error(
+        `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+      );
+    }
+
+    const transaction = await TransactionHistory.findById(transactionId);
+    if (!transaction) {
+      throw new Error("Transaction not found");
+    }
+
+    console.log(
+      `Updating transaction ${transactionId} status from ${transaction.status} to ${newStatus}`,
+    );
+
+    // If changing to completed, update parent wallet points
+    if (newStatus === "completed" && transaction.status !== "completed") {
+      const parent = await Parents.findById(transaction.parent_id);
+      if (parent) {
+        parent.wallet_points = (parent.wallet_points || 0) + transaction.points;
+        await parent.save();
+      } else {
+        console.warn("Parent not found for transaction:", transactionId);
+      }
+      transaction.transaction_date = new Date();
+    }
+
+    transaction.status = newStatus;
+    await transaction.save();
+
+    return transaction;
+  } catch (error) {
+    console.error("Update transaction status error:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   createPaymentLink,
   verifyPaymentWebhook,
   checkPaymentStatus,
   cancelPaymentLink,
   getTransactionHistory,
+  updateTransactionStatus,
 };

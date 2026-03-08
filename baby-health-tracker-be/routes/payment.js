@@ -24,6 +24,11 @@ router.get(
   authMiddleware.authenticateToken,
   paymentController.getHistory,
 );
+router.put(
+  "/status/:transactionId",
+  authMiddleware.authenticateToken,
+  paymentController.updateStatus,
+);
 
 // Webhook route (no auth required - PayOS will call this)
 router.post("/webhook", paymentController.handleWebhook);

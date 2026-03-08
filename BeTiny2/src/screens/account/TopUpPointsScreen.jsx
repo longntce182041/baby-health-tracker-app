@@ -17,6 +17,7 @@ import { useAuth } from "../../context/AuthContext";
 import { colors, typography } from "../../theme";
 import { createPayment } from "../../api/paymentApi";
 import { getItem } from "../../storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { fontFamily } = typography;
 const PACKAGES = [
@@ -93,14 +94,27 @@ export default function TopUpPointsScreen({ navigation }) {
       }
 
       // Create payment link with PayOS
-      const response = await createPayment(selectedPackageId, "payos");
+      const response = await createPayment(
+        selectedPackageId,
+        "payos",
+        selectedPackage.points,
+        selectedPackage.price,
+      );
 
       if (response.success && response.data.payment_link) {
         // Navigate to WebView screen with payment URL
+        AsyncStorage.setItem(
+          "pendingPayment",
+          JSON.stringify({
+            orderCode: response.data.order_code,
+            transactionId: response.data.transaction_id,
+          }),
+        );
         navigation.navigate("PaymentWebView", {
           paymentUrl: response.data.payment_link,
           orderCode: response.data.order_code,
         });
+        console.log("Transaction ID:", response.data.transaction_id);
         setIsProcessing(false);
       } else {
         Alert.alert("Lỗi", response.message || "Không thể tạo link thanh toán");
