@@ -23,7 +23,8 @@ const findDoctorSchedules = async (doctorId, fromDate, toDate) => {
 
   return await DoctorSchedule.find(query)
     .sort({ date: 1 })
-    .populate("doctor_id");
+    .populate("doctor_id")
+    .populate({ path: "slots.patient_ids", select: "full_name" });
 };
 
 const findAvailableSchedules = async () => {

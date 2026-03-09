@@ -33,6 +33,18 @@ router.post(
   requireDoctor,
   doctorScheduleController.registerWeeklySchedule,
 );
+router.post(
+  "/doctor/schedules/day",
+  authenticateToken,
+  requireDoctor,
+  doctorScheduleController.registerScheduleDay,
+);
+router.get(
+  "/doctor/schedules",
+  authenticateToken,
+  requireDoctor,
+  doctorScheduleController.getOwnDoctorSchedule,
+);
 router.get(
   "/doctors",
   authenticateToken,
@@ -143,6 +155,30 @@ router.get(
   authenticateToken,
   requireParent,
   consultationController.listConsultationDoctors,
+);
+router.get(
+  "/doctor/consultations/upcoming",
+  authenticateToken,
+  requireDoctor,
+  consultationController.getDoctorUpcomingConsultations,
+);
+router.get(
+  "/doctor/consultations/stats",
+  authenticateToken,
+  requireDoctor,
+  consultationController.getDoctorConsultationStats,
+);
+router.get(
+  "/doctor/consultations",
+  authenticateToken,
+  requireDoctor,
+  consultationController.getDoctorConsultations,
+);
+router.patch(
+  "/doctor/consultations/:id/end",
+  authenticateToken,
+  requireDoctor,
+  consultationController.endDoctorConsultation,
 );
 
 router.post(

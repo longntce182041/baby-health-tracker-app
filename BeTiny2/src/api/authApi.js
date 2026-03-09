@@ -1,5 +1,6 @@
 import api from "./api";
 import { getItem, setItem, removeItem } from "../storage";
+import { TEST_PASSWORD, TEST_PHONE, TEST_USER } from "../data/mockAuth";
 
 export const register = async (userData) => {
   try {
@@ -78,7 +79,7 @@ export const login = async (credentials) => {
 export const logout = async () => {
   try {
     await api.post("/logout");
-  } catch (e) {}
+  } catch (e) { }
   await removeItem("accessToken");
   await removeItem("refreshToken");
   await removeItem("user");

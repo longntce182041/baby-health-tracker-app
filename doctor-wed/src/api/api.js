@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Thay đổi URL theo môi trường
-const API_URL = "http://localhost:3000/api"; // Hoặc IP server thực tế
+const API_URL = "http://192.168.2.206:3000/api"; // Hoặc IP server thực tế
 
 const api = axios.create({
   baseURL: API_URL,
