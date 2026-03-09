@@ -5,15 +5,14 @@ const transactionHistorySchema = new mongoose.Schema({
     type: String, // Changed to String to support both package codes (p1, p2, p3) and ObjectIds
     required: true,
   },
-  account_id: {
+  parent_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Account",
+    ref: "Parents",
     required: true,
   },
   transaction_date: { type: Date, default: Date.now },
   points: { type: Number, required: true },
   amount: { type: Number, required: true },
-  receiver: { type: String, required: true },
   payment_method: { type: String, required: true },
   status: {
     type: String,
