@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./DoctorDashboard.css";
+import "./style/DoctorDashboard.css";
 
 // Icon/Image URLs from Figma
 const icons = {

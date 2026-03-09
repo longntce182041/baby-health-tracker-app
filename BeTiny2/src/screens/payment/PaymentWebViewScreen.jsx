@@ -14,6 +14,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
 import { colors, typography } from "../../theme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { updateTransactionStatus } from "../../api/paymentApi";
 
 const { fontFamily } = typography;
 
@@ -36,11 +38,18 @@ export default function PaymentWebViewScreen({ route, navigation }) {
     // Check if user reached success page
     if (url.includes("success.payos.vn") || url.includes("payment-success")) {
       console.log("Payment success detected!");
+      console.log("Order code:", orderCode);
 
       // Refresh user points
       try {
         await refreshUser();
-
+        const pendingPayment = await AsyncStorage.getItem("pendingPayment");
+        if (pendingPayment) {
+          const { transactionId } = JSON.parse(pendingPayment);
+          // Update transaction status to completed
+          await updateTransactionStatus(transactionId, "completed");
+          await AsyncStorage.removeItem("pendingPayment");
+        }
         // Show success message
         Alert.alert(
           "Thành công!",

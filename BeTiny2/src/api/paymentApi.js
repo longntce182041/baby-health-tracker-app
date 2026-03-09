@@ -6,9 +6,16 @@ import api from "./api";
  * @param {string} paymentMethod - Payment method (default: 'payos')
  * @returns {Promise} Payment link data
  */
-export const createPayment = async (packageId, paymentMethod = "payos") => {
+export const createPayment = async (
+  packageId,
+  paymentMethod = "payos",
+  points,
+  amount,
+) => {
   try {
     const response = await api.post("/payments/create", {
+      points,
+      amount,
       package_id: packageId,
       payment_method: paymentMethod,
     });
@@ -73,6 +80,24 @@ export const getPointPackages = async () => {
     return response.data;
   } catch (error) {
     console.error("Get point packages error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update transaction status
+ * @param {string} transactionId - Transaction ID
+ * @param {string} status - New status (pending, completed, failed, cancelled)
+ * @returns {Promise} Updated transaction data
+ */
+export const updateTransactionStatus = async (transactionId, status) => {
+  try {
+    const response = await api.put(`/payments/status/${transactionId}`, {
+      status,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Update transaction status error:", error);
     throw error;
   }
 };
