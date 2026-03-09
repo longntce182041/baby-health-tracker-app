@@ -331,7 +331,7 @@
 
 
 
-@media (max-width: auto) {
+@media (max-width: 768px) {
   .login-container {
     padding: 16px;
   }

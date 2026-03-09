@@ -6,7 +6,7 @@ import "../style/loginPage.css";
 
 const { Title, Text } = Typography;
 
-export default function LoginPage() {
+export default function LoginPage({ onLoginSuccess }) {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
@@ -22,12 +22,19 @@ export default function LoginPage() {
       });
 
       console.log("Login response:", response);
-      message.success("Đăng nhập thành công!");
 
-      // Navigate to dashboard after successful login
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1000);
+      const userRaw = localStorage.getItem("user");
+      const role = userRaw ? JSON.parse(userRaw)?.role : "";
+      if (String(role || "").toLowerCase() !== "doctor") {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        message.error("Tài khoản này không thuộc vai trò bác sĩ.");
+        return;
+      }
+
+      message.success("Đăng nhập thành công!");
+      onLoginSuccess?.();
     } catch (error) {
       console.error("Login error:", error);
       const errorMessage =

@@ -81,6 +81,79 @@ const registerWeeklySchedule = async (req, res) => {
   }
 };
 
+const registerScheduleDay = async (req, res) => {
+  const doctorId = req.user ? req.user.doctor_id : null;
+  const { date, slots, note } = req.body;
+
+  try {
+    if (!doctorId) {
+      return res.status(403).json({ message: "Doctor id missing in token" });
+    }
+
+    if (!date || !Array.isArray(slots) || slots.length === 0) {
+      return res.status(400).json({
+        message: "date and a non-empty slots array are required",
+      });
+    }
+
+    const scheduleDate = new Date(`${date}T00:00:00.000Z`);
+    if (Number.isNaN(scheduleDate.getTime())) {
+      return res.status(400).json({
+        message: "Invalid date format. Expected YYYY-MM-DD",
+      });
+    }
+
+    const sanitizedSlots = slots.map((slot) => {
+      if (!slot || !slot.start_time || !slot.end_time) {
+        throw new Error("Each slot must include start_time and end_time");
+      }
+
+      return {
+        start_time: slot.start_time,
+        end_time: slot.end_time,
+        patient_ids: [],
+      };
+    });
+
+    const existing = await doctorScheduleService.findScheduleByDoctorAndDate(
+      doctorId,
+      scheduleDate,
+    );
+
+    if (existing) {
+      const hasBookedSlots = existing.slots.some(
+        (slot) => Array.isArray(slot.patient_ids) && slot.patient_ids.length > 0,
+      );
+
+      if (hasBookedSlots) {
+        return res.status(400).json({
+          message:
+            "This day already has booked consultations and cannot be overwritten",
+        });
+      }
+    }
+
+    const schedule = await doctorScheduleService.upsertScheduleForDate(
+      doctorId,
+      scheduleDate,
+      sanitizedSlots,
+      note,
+      "available",
+    );
+
+    return res.status(200).json({
+      message: "Day schedule registered successfully",
+      data: schedule,
+    });
+  } catch (error) {
+    if (error.message && error.message.includes("Each slot must include")) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 const getDoctorSchedule = async (req, res) => {
   const { doctor_id } = req.params;
   const { from_date, to_date } = req.query;
@@ -163,7 +236,90 @@ const getDoctorSchedule = async (req, res) => {
   }
 };
 
+const getOwnDoctorSchedule = async (req, res) => {
+  const doctorId = req.user ? req.user.doctor_id : null;
+  const { from_date, to_date } = req.query;
+
+  try {
+    if (!doctorId) {
+      return res.status(403).json({ message: "Doctor role required" });
+    }
+
+    const doctor = await doctorService.findDoctorById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    let schedules;
+    if (from_date && to_date) {
+      schedules = await doctorScheduleService.findDoctorSchedules(
+        doctorId,
+        from_date,
+        to_date,
+      );
+    } else {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const thirtyDaysLater = new Date(today);
+      thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+
+      schedules = await doctorScheduleService.findDoctorSchedules(
+        doctorId,
+        today.toISOString(),
+        thirtyDaysLater.toISOString(),
+      );
+    }
+
+    const consolidatedSchedules = schedules.map((schedule) => {
+      const dateObj =
+        schedule.date instanceof Date ? schedule.date : new Date(schedule.date);
+      const normalizedDate = dateObj.toISOString().split("T")[0];
+
+      return {
+        date: normalizedDate,
+        status: schedule.status,
+        note: schedule.note || "",
+        slots: schedule.slots.map((slot) => {
+          const bookedCount = Array.isArray(slot.patient_ids)
+            ? slot.patient_ids.length
+            : 0;
+          const patientNames = Array.isArray(slot.patient_ids)
+            ? slot.patient_ids
+              .map((parent) => parent?.full_name)
+              .filter(Boolean)
+            : [];
+
+          return {
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            booked_count: bookedCount,
+            available_slots: Math.max(0, 3 - bookedCount),
+            is_fully_booked: bookedCount >= 3,
+            patient_names: patientNames,
+          };
+        }),
+      };
+    });
+
+    return res.status(200).json({
+      message: "Doctor own schedule fetched",
+      doctor: {
+        _id: doctor._id,
+        full_name: doctor.full_name,
+        specialty: doctor.specialty,
+      },
+      data: consolidatedSchedules,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   registerWeeklySchedule,
+  registerScheduleDay,
   getDoctorSchedule,
+  getOwnDoctorSchedule,
 };

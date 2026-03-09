@@ -12,6 +12,7 @@ const vaccinationController = require("../controller/vaccinationController");
 const vaccinationScheduleController = require("../controller/vaccinationScheduleController");
 const paymentRoutes = require("./payment");
 const hospitalBranchController = require("../controller/hospitalBranchController");
+const pointPackageController = require("../controller/pointPackageController");
 const {
   authenticateToken,
   requireParent,
@@ -31,6 +32,18 @@ router.post(
   authenticateToken,
   requireDoctor,
   doctorScheduleController.registerWeeklySchedule,
+);
+router.post(
+  "/doctor/schedules/day",
+  authenticateToken,
+  requireDoctor,
+  doctorScheduleController.registerScheduleDay,
+);
+router.get(
+  "/doctor/schedules",
+  authenticateToken,
+  requireDoctor,
+  doctorScheduleController.getOwnDoctorSchedule,
 );
 router.get(
   "/doctors",
@@ -142,6 +155,30 @@ router.get(
   authenticateToken,
   requireParent,
   consultationController.listConsultationDoctors,
+);
+router.get(
+  "/doctor/consultations/upcoming",
+  authenticateToken,
+  requireDoctor,
+  consultationController.getDoctorUpcomingConsultations,
+);
+router.get(
+  "/doctor/consultations/stats",
+  authenticateToken,
+  requireDoctor,
+  consultationController.getDoctorConsultationStats,
+);
+router.get(
+  "/doctor/consultations",
+  authenticateToken,
+  requireDoctor,
+  consultationController.getDoctorConsultations,
+);
+router.patch(
+  "/doctor/consultations/:id/end",
+  authenticateToken,
+  requireDoctor,
+  consultationController.endDoctorConsultation,
 );
 
 router.post(
@@ -340,7 +377,26 @@ router.get(
   vaccinationScheduleController.viewVaccinationClinicsByVaccine,
 );
 
-// Payment routes
-router.use("/payments", paymentRoutes);
+// Point Package routes (no authentication required)
+router.post(
+  "/point-packages",
+  pointPackageController.createPointPackage,
+);
+router.get(
+  "/point-packages",
+  pointPackageController.listPointPackages,
+);
+router.get(
+  "/point-packages/:id",
+  pointPackageController.getPointPackageById,
+);
+router.put(
+  "/point-packages/:id",
+  pointPackageController.updatePointPackage,
+);
+router.delete(
+  "/point-packages/:id",
+  pointPackageController.deletePointPackage,
+);
 
 module.exports = router;

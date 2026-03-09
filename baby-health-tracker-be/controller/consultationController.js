@@ -131,7 +131,7 @@ const scheduleConsultation = async (req, res) => {
       baby_id,
       doctor_id,
       schedule_id: schedule._id,
-      status: "scheduled",
+      status: "waiting",
       consultation_time: consultationTime,
       notes,
     });
@@ -199,6 +199,128 @@ const listConsultationDoctors = async (req, res) => {
     return res.status(200).json({
       message: "Consultation doctor list fetched",
       data: doctors,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
+
+const getDoctorUpcomingConsultations = async (req, res) => {
+  const doctorId = req.user ? req.user.doctor_id : null;
+
+  try {
+    if (!doctorId) {
+      return res.status(403).json({ message: "Doctor role required" });
+    }
+
+    const parsedLimit = Number(req.query.limit);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(parsedLimit, 50)
+      : 10;
+
+    await consultationService.syncDoctorConsultationStatuses(doctorId);
+
+    const consultations =
+      await consultationService.getUpcomingConsultationsByDoctor(doctorId, limit);
+
+    return res.status(200).json({
+      message: "Upcoming consultations fetched",
+      data: consultations,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
+
+const getDoctorConsultationStats = async (req, res) => {
+  const doctorId = req.user ? req.user.doctor_id : null;
+
+  try {
+    if (!doctorId) {
+      return res.status(403).json({ message: "Doctor role required" });
+    }
+
+    await consultationService.syncDoctorConsultationStatuses(doctorId);
+
+    const stats = await consultationService.getDoctorConsultationStats(doctorId);
+
+    return res.status(200).json({
+      message: "Doctor consultation stats fetched",
+      data: stats,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
+
+const getDoctorConsultations = async (req, res) => {
+  const doctorId = req.user ? req.user.doctor_id : null;
+
+  try {
+    if (!doctorId) {
+      return res.status(403).json({ message: "Doctor role required" });
+    }
+
+    const { status, fromDate, toDate, search } = req.query;
+    const parsedLimit = Number(req.query.limit);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+      ? Math.min(parsedLimit, 200)
+      : 100;
+
+    await consultationService.syncDoctorConsultationStatuses(doctorId);
+
+    const consultations = await consultationService.getConsultationsByDoctor(
+      doctorId,
+      {
+        status,
+        fromDate,
+        toDate,
+        search,
+        limit,
+      },
+    );
+
+    return res.status(200).json({
+      message: "Doctor consultations fetched",
+      data: consultations,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
+
+const endDoctorConsultation = async (req, res) => {
+  const doctorId = req.user ? req.user.doctor_id : null;
+
+  try {
+    if (!doctorId) {
+      return res.status(403).json({ message: "Doctor role required" });
+    }
+
+    const { id } = req.params;
+    const updated = await consultationService.endConsultationByDoctor(id, doctorId);
+
+    if (!updated) {
+      return res.status(404).json({ message: "Consultation not found" });
+    }
+
+    if (updated.invalidStatus) {
+      return res.status(400).json({
+        message: "Only in-progress consultations can be ended",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Consultation ended successfully",
+      data: updated,
     });
   } catch (error) {
     return res
@@ -309,6 +431,10 @@ const adminMonitorConsultationStatus = async (req, res) => {
 module.exports = {
   scheduleConsultation,
   listConsultationDoctors,
+  getDoctorUpcomingConsultations,
+  getDoctorConsultationStats,
+  getDoctorConsultations,
+  endDoctorConsultation,
   adminListConsultations,
   adminGetConsultationDetail,
   adminAssignDoctorToConsultation,
