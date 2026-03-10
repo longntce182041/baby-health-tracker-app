@@ -61,9 +61,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
+const config = require("./configs/Config");
 console.log("=== KIỂM TRA ENV TRÊN RENDER ===");
-console.log("MONGO_URI có tồn tại không?", process.env.MONGO_URI ? "CÓ" : "KHÔNG");
-console.log("Chiều dài MONGO_URI:", process.env.MONGO_URI ? process.env.MONGO_URI.length : 0);
+console.log("MONGODB_URI có tồn tại không?", config.MONGODB_URI ? "CÓ" : "KHÔNG");
+console.log("Chiều dài MONGODB_URI:", config.MONGODB_URI ? config.MONGODB_URI.length : 0);
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);

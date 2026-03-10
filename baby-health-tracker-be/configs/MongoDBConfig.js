@@ -1,9 +1,8 @@
 const mongoose = require('mongoose');
+const config = require('./Config');
 
 const connectDB = async () => {
-    const mongoUri =
-        process.env.MONGODB_URI ||
-        'mongodb://127.0.0.1:27017/baby_health_tracker';
+    const mongoUri = config.MONGODB_URI;
 
     try {
         mongoose.set('strictQuery', true);

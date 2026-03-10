@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const EmailOtp = require("../models/email_otps");
 const accountService = require("../services/accountService");
 const parentService = require("../services/parentService");
+const config = require("../configs/Config");
 
 const OTP_EXPIRY_MINUTES = 10;
 const generateOtp = () => crypto.randomInt(10000, 99999).toString();
@@ -47,14 +48,14 @@ const register = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       port: 465, // Bắt buộc dùng 465 hoặc 587
-  secure: true, // true cho 465, false cho 587
+      secure: true, // true cho 465, false cho 587
       auth: {
-        user: process.env.EMAIL_USER || "betiny10092005@gmail.com",
-        pass: process.env.EMAIL_PASS || "srii tkdr scdj jxpo",
+        user: config.EMAIL_USER,
+        pass: config.EMAIL_PASS,
       },
     });
     await transporter.sendMail({
-      from: process.env.EMAIL_USER || "betiny10092005@gmail.com",
+      from: config.EMAIL_USER,
       to: email,
       subject: "Your OTP Code",
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
@@ -124,7 +125,7 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const secret = process.env.JWT_SECRET || "12345-67890-09876-54321";
+    const secret = config.JWT_SECRET;
 
     const tokenPayload = {
       account_id: account._id,
@@ -176,12 +177,12 @@ const forgotPassword = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: process.env.EMAIL_USER || "betiny10092005@gmail.com",
-        pass: process.env.EMAIL_PASS || "srii tkdr scdj jxpo",
+        user: config.EMAIL_USER,
+        pass: config.EMAIL_PASS,
       },
     });
     await transporter.sendMail({
-      from: process.env.EMAIL_USER || "betiny10092005@gmail.com",
+      from: config.EMAIL_USER,
       to: email,
       subject: "Reset password OTP",
       text: `Your OTP code is ${otp}. It will expire in ${OTP_EXPIRY_MINUTES} minutes.`,

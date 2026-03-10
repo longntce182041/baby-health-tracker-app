@@ -1,4 +1,5 @@
 const payOS = require("../configs/PayOSConfig");
+const config = require("../configs/Config");
 const TransactionHistory = require("../models/transaction_history");
 const PointPackage = require("../models/point_package");
 const Account = require("../models/accounts");
@@ -75,8 +76,8 @@ async function createPaymentLink(
           price: pointPackage.price,
         },
       ],
-      returnUrl: `${process.env.PAYMENT_SUCCESS_URL}?orderCode=${orderCode}`,
-      cancelUrl: `${process.env.PAYMENT_CANCEL_URL}?orderCode=${orderCode}`,
+      returnUrl: `${config.PAYMENT_SUCCESS_URL}?orderCode=${orderCode}`,
+      cancelUrl: `${config.PAYMENT_CANCEL_URL}?orderCode=${orderCode}`,
     };
 
     // 6. Create payment link with PayOS
