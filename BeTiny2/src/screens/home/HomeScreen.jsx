@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
@@ -154,46 +155,58 @@ export default function HomeScreen({ navigation }) {
   const bannerCardMargin = 24;
   const bannerCardWidth = screenWidth - bannerCardMargin * 2;
 
-  useEffect(() => {
-    const fetch = async () => {
-      console.log("HomeScreen - isLoggedIn:", isLoggedIn);
-      console.log("HomeScreen - user from context:", user);
-      const token = await getItem("accessToken");
-      console.log("HomeScreen - token from storage:", token);
+  // Tách hàm fetchBabies ra để có thể gọi lại khi cần
+  const fetchBabies = useCallback(async () => {
+    console.log("HomeScreen - isLoggedIn:", isLoggedIn);
+    console.log("HomeScreen - user from context:", user);
+    const token = await getItem("accessToken");
+    console.log("HomeScreen - token from storage:", token);
 
-      setLoading(true);
-      // Check cả isLoggedIn và token để tránh race condition khi logout
-      if (!isLoggedIn || !token) {
-        setBabies([]);
-        setSelectedBaby(null);
-        setLoading(false);
-        return;
-      }
-      try {
-        const res = await getBabies();
-        const list = Array.isArray(res?.data?.data) ? res.data.data : [];
-        setBabies(list);
+    setLoading(true);
+    // Check cả isLoggedIn và token để tránh race condition khi logout
+    if (!isLoggedIn || !token) {
+      setBabies([]);
+      setSelectedBaby(null);
+      setLoading(false);
+      return;
+    }
+    try {
+      const res = await getBabies();
+      const list = Array.isArray(res?.data?.data) ? res.data.data : [];
+      setBabies(list);
 
-        // Load baby_id từ storage và tìm baby tương ứng
-        const savedBabyId = await getItem("selected_baby_id");
-        if (savedBabyId && list.length > 0) {
-          const found = list.find(
-            (b) => String(b.baby_id || b.id) === String(savedBabyId),
-          );
-          setSelectedBaby(found || list[0]);
-        } else {
-          setSelectedBaby(list.length > 0 ? list[0] : null);
-        }
-      } catch (err) {
-        console.error("Home getBabies:", err);
-        setBabies([]);
-        setSelectedBaby(null);
-      } finally {
-        setLoading(false);
+      // Load baby_id từ storage và tìm baby tương ứng
+      const savedBabyId = await getItem("selected_baby_id");
+      if (savedBabyId && list.length > 0) {
+        const found = list.find(
+          (b) => String(b.baby_id || b.id) === String(savedBabyId),
+        );
+        setSelectedBaby(found || list[0]);
+      } else {
+        setSelectedBaby(list.length > 0 ? list[0] : null);
       }
-    };
-    fetch();
+    } catch (err) {
+      console.error("Home getBabies:", err);
+      setBabies([]);
+      setSelectedBaby(null);
+    } finally {
+      setLoading(false);
+    }
   }, [isLoggedIn]);
+
+  // Fetch babies khi component mount hoặc isLoggedIn thay đổi
+  useEffect(() => {
+    fetchBabies();
+  }, [fetchBabies]);
+
+  // Reload babies mỗi khi màn hình được focus (quay lại từ BabyForm)
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoggedIn) {
+        fetchBabies();
+      }
+    }, [isLoggedIn, fetchBabies]),
+  );
 
   useEffect(() => {
     if (!isLoggedIn) {

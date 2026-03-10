@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../context/AuthContext";
@@ -306,25 +307,44 @@ export default function GrowthChartScreen({ navigation, route }) {
     }
   };
 
+  // Tách hàm load growth records để có thể gọi lại khi cần
+  const loadGrowthRecords = useCallback(async () => {
+    if (!selectedBaby || !isLoggedIn) return;
+    const babyId = selectedBaby.baby_id || selectedBaby.id;
+    try {
+      const growthRes = await getGrowthRecords(babyId);
+      // Backend returns {data: {baby_id, points: [...]}}
+      const records = Array.isArray(growthRes?.data?.data?.points)
+        ? growthRes.data.data.points
+        : Array.isArray(growthRes?.data?.points)
+          ? growthRes.data.points
+          : [];
+      setGrowthRecords(records);
+    } catch (err) {
+      console.error("Load growth records error:", err);
+      setGrowthRecords([]);
+    }
+  }, [selectedBaby?.baby_id, selectedBaby?.id, isLoggedIn]);
+
+  // Load babies khi component mount hoặc isLoggedIn thay đổi
   useEffect(() => {
     load();
   }, [isLoggedIn]);
 
+  // Load growth records khi selectedBaby thay đổi
   useEffect(() => {
-    if (!selectedBaby || !isLoggedIn) return;
-    const babyId = selectedBaby.baby_id || selectedBaby.id;
-    getGrowthRecords(babyId)
-      .then((growthRes) => {
-        // Backend returns {data: {baby_id, points: [...]}}
-        const records = Array.isArray(growthRes?.data?.data?.points)
-          ? growthRes.data.data.points
-          : Array.isArray(growthRes?.data?.points)
-            ? growthRes.data.points
-            : [];
-        setGrowthRecords(records);
-      })
-      .catch(() => setGrowthRecords([]));
-  }, [selectedBaby?.baby_id, selectedBaby?.id, isLoggedIn]);
+    loadGrowthRecords();
+  }, [loadGrowthRecords]);
+
+  // Reload data mỗi khi màn hình được focus (quay lại từ màn hình khác)
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoggedIn) {
+        load();
+        loadGrowthRecords();
+      }
+    }, [isLoggedIn]),
+  );
 
   const goHome = () => navigation.navigate("Main", { screen: "HomeTab" });
   const openAddMeasure = () => {
