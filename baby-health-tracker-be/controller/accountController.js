@@ -55,6 +55,7 @@ console.log("2");
       },
     });
     console.log("3");
+    try{
     await transporter.sendMail({
       from: config.EMAIL_USER,
       to: email,
@@ -62,6 +63,10 @@ console.log("2");
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
     });
     console.log("4");
+      } catch (mailError) {
+      console.error("LỖI GỬI MAIL CHI TIẾT:", mailError);
+      throw mailError; // Ném lỗi ra ngoài để block catch tổng bắt được
+    }
     res
       .status(201)
       .json({ message: "Account created successfully. OTP sent to email." });
