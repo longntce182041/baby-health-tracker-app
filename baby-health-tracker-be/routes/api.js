@@ -13,6 +13,7 @@ const vaccinationScheduleController = require("../controller/vaccinationSchedule
 const paymentRoutes = require("./payment");
 const hospitalBranchController = require("../controller/hospitalBranchController");
 const pointPackageController = require("../controller/pointPackageController");
+const uploadController = require("../controller/uploadController");
 const {
   authenticateToken,
   requireParent,
@@ -239,39 +240,18 @@ router.put(
   userController.changePassword,
 );
 
-router.get(
-  "/admin/parents",
-  userController.adminListParents,
-);
-router.get(
-  "/admin/parents/:account_id",
-  userController.adminGetParentDetail,
-);
-router.put(
-  "/admin/parents/:account_id",
-  userController.adminUpdateParent,
-);
+router.get("/admin/parents", userController.adminListParents);
+router.get("/admin/parents/:account_id", userController.adminGetParentDetail);
+router.put("/admin/parents/:account_id", userController.adminUpdateParent);
 router.patch(
   "/admin/parents/:account_id/status",
   userController.adminChangeParentStatus,
 );
 
-router.get(
-  "/admin/doctors",
-  userController.adminListDoctors,
-);
-router.get(
-  "/admin/doctors/:account_id",
-  userController.adminGetDoctorDetail,
-);
-router.post(
-  "/admin/doctors",
-  userController.adminAddDoctor,
-);
-router.put(
-  "/admin/doctors/:account_id",
-  userController.adminUpdateDoctor,
-);
+router.get("/admin/doctors", userController.adminListDoctors);
+router.get("/admin/doctors/:account_id", userController.adminGetDoctorDetail);
+router.post("/admin/doctors", userController.adminAddDoctor);
+router.put("/admin/doctors/:account_id", userController.adminUpdateDoctor);
 router.patch(
   "/admin/doctors/:account_id/status",
   userController.adminChangeDoctorStatus,
@@ -294,26 +274,14 @@ router.patch(
   consultationController.adminAssignDoctorToConsultation,
 );
 
-router.get(
-  "/admin/vaccines",
-  vaccinationController.adminListVaccines,
-);
-router.post(
-  "/admin/vaccines",
-  vaccinationController.adminAddVaccine,
-);
-router.put(
-  "/admin/vaccines/:id",
-  vaccinationController.adminUpdateVaccine,
-);
+router.get("/admin/vaccines", vaccinationController.adminListVaccines);
+router.post("/admin/vaccines", vaccinationController.adminAddVaccine);
+router.put("/admin/vaccines/:id", vaccinationController.adminUpdateVaccine);
 router.patch(
   "/admin/vaccines/:id/locations",
   vaccinationController.updateVaccineLocations,
 );
-router.delete(
-  "/admin/vaccines/:id",
-  vaccinationController.adminDeleteVaccine,
-);
+router.delete("/admin/vaccines/:id", vaccinationController.adminDeleteVaccine);
 
 router.get(
   "/admin/hospital-branches",
@@ -386,25 +354,25 @@ router.get(
 );
 
 // Point Package routes (no authentication required)
+router.post("/point-packages", pointPackageController.createPointPackage);
+router.get("/point-packages", pointPackageController.listPointPackages);
+router.get("/point-packages/:id", pointPackageController.getPointPackageById);
+router.put("/point-packages/:id", pointPackageController.updatePointPackage);
+router.delete("/point-packages/:id", pointPackageController.deletePointPackage);
+
+// Upload image routes
 router.post(
-  "/point-packages",
-  pointPackageController.createPointPackage,
+  "/upload/image",
+  authenticateToken,
+  uploadController.uploadSingle,
+  uploadController.uploadImage,
 );
-router.get(
-  "/point-packages",
-  pointPackageController.listPointPackages,
+router.post(
+  "/upload/images",
+  authenticateToken,
+  uploadController.uploadMultiple,
+  uploadController.uploadImages,
 );
-router.get(
-  "/point-packages/:id",
-  pointPackageController.getPointPackageById,
-);
-router.put(
-  "/point-packages/:id",
-  pointPackageController.updatePointPackage,
-);
-router.delete(
-  "/point-packages/:id",
-  pointPackageController.deletePointPackage,
-);
+router.delete("/upload/image", authenticateToken, uploadController.deleteImage);
 
 module.exports = router;
