@@ -198,21 +198,19 @@ const forgotPassword = async (req, res) => {
       used: false,
     });
 
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      auth: {
-        user: config.EMAIL_USER,
-        pass: config.EMAIL_PASS,
-      },
-    });
-    await transporter.sendMail({
-      from: config.EMAIL_USER,
-      to: email,
-      subject: "Reset password OTP",
-      text: `Your OTP code is ${otp}. It will expire in ${OTP_EXPIRY_MINUTES} minutes.`,
-    });
+    try {
+      await resend.emails.send({
+        from: "onboarding@resend.dev",
+        to: email,
+        subject: "Reset Password OTP",
+        text: `Your OTP code is ${otp}. It will expire in ${OTP_EXPIRY_MINUTES} minutes.`,
+      });
 
-    res.status(200).json({ message: "OTP sent to email" });
+      res.status(200).json({ message: "OTP sent to email" });
+    } catch (mailError) {
+      console.error("Lỗi gửi mail reset password:", mailError);
+      res.status(500).json({ message: "Failed to send OTP email" });
+    }
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
