@@ -21,13 +21,16 @@ app.set('port', port);
  */
 
 var server = http.createServer(app);
+
+// Khởi tạo Socket.io
 initSocket(server);
 
 /**
  * Listen on provided port, on all network interfaces.
  */
 
-server.listen(port);
+// SỬA Ở ĐÂY: Thêm '0.0.0.0' để Render có thể map đúng port ra internet
+server.listen(port, '0.0.0.0'); 
 server.on('error', onError);
 server.on('listening', onListening);
 
@@ -88,5 +91,9 @@ function onListening() {
     var bind = typeof addr === 'string'
         ? 'pipe ' + addr
         : 'port ' + addr.port;
+    
     debug('Listening on ' + bind);
+    
+    // SỬA Ở ĐÂY: Thêm console.log để bạn dễ nhìn thấy log báo thành công trên Render
+    console.log('🚀 Server is running and listening on ' + bind);
 }
