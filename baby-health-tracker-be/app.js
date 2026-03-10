@@ -48,13 +48,14 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "jade");
 
 app.use(logger("dev"));
-app.use(cors({
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "exp://192.168.2.206:8081"
-  ]
-}));
+// app.use(cors({
+//   origin: [
+//     "http://localhost:3000",
+//     "http://localhost:5173",
+//     "exp://192.168.2.206:8081"
+//   ]
+// }));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
