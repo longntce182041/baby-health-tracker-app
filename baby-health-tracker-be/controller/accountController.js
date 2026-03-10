@@ -47,12 +47,12 @@ const register = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: "betiny10092005@gmail.com",
-        pass: "srii tkdr scdj jxpo",
+        user: process.env.EMAIL_USER || "betiny10092005@gmail.com",
+        pass: process.env.EMAIL_PASS || "srii tkdr scdj jxpo",
       },
     });
     await transporter.sendMail({
-      from: "betiny10092005@gmail.com",
+      from: process.env.EMAIL_USER || "betiny10092005@gmail.com",
       to: email,
       subject: "Your OTP Code",
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
@@ -174,12 +174,12 @@ const forgotPassword = async (req, res) => {
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       auth: {
-        user: "betiny10092005@gmail.com",
-        pass: "srii tkdr scdj jxpo",
+        user: process.env.EMAIL_USER || "betiny10092005@gmail.com",
+        pass: process.env.EMAIL_PASS || "srii tkdr scdj jxpo",
       },
     });
     await transporter.sendMail({
-      from:  "betiny10092005@gmail.com",
+      from: process.env.EMAIL_USER || "betiny10092005@gmail.com",
       to: email,
       subject: "Reset password OTP",
       text: `Your OTP code is ${otp}. It will expire in ${OTP_EXPIRY_MINUTES} minutes.`,
