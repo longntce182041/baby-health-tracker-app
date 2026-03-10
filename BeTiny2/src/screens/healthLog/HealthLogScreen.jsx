@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,11 @@ import {
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, typography } from "../../theme";
 import { getHealthLogs } from "../../api/healthLogApi";
-import { MOCK_HEALTH_LOG_GROUPS } from "../../data/mockHealthLogs";
 import { getItem } from "../../storage";
 
 const { fontFamily } = typography;
@@ -38,7 +38,7 @@ export default function HealthLogScreen({ route, navigation }) {
   const routeBabyId = route.params?.babyId;
   const canGoBack = navigation.canGoBack?.();
   const [babyId, setBabyId] = useState(routeBabyId || null);
-  const [momentGroups, setMomentGroups] = useState(MOCK_HEALTH_LOG_GROUPS);
+  const [momentGroups, setMomentGroups] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // Load baby_id từ storage nếu không có trong route params
@@ -58,7 +58,8 @@ export default function HealthLogScreen({ route, navigation }) {
     loadBabyId();
   }, [routeBabyId]);
 
-  const loadHealthLogs = async () => {
+  // Tách hàm loadHealthLogs để có thể gọi lại khi cần
+  const loadHealthLogs = useCallback(async () => {
     if (!babyId) {
       console.log("HealthLogScreen - No babyId available");
       return;
@@ -85,14 +86,23 @@ export default function HealthLogScreen({ route, navigation }) {
           if (log.tempurature || log.temperature) {
             health.push({
               icon: "thermometer-outline",
+              label: "Nhiệt độ",
               value: `${log.tempurature || log.temperature}°C`,
             });
           }
           if (log.sleep) {
-            health.push({ icon: "bed-outline", value: `${log.sleep} giờ` });
+            health.push({
+              icon: "bed-outline",
+              label: "Ngủ",
+              value: `${log.sleep} giờ`,
+            });
           }
           if (log.eating) {
-            health.push({ icon: "restaurant-outline", value: log.eating });
+            health.push({
+              icon: "restaurant-outline",
+              label: "Ăn uống",
+              value: log.eating,
+            });
           }
 
           return {
@@ -112,7 +122,8 @@ export default function HealthLogScreen({ route, navigation }) {
             health: health.length > 0 ? health : null,
             activities: log.activities || [],
             log_date: log.log_date,
-            // Keep original data for editing\n            _original: log,
+            // Keep original data for editing
+            _original: log,
           };
         });
 
@@ -141,48 +152,37 @@ export default function HealthLogScreen({ route, navigation }) {
           return acc;
         }, []);
 
-        setMomentGroups(grouped.length > 0 ? grouped : MOCK_HEALTH_LOG_GROUPS);
+        setMomentGroups(grouped);
       } else {
         console.warn(
           "HealthLogScreen: Expected array but got:",
           typeof res?.data,
         );
-        setMomentGroups(MOCK_HEALTH_LOG_GROUPS);
+        setMomentGroups([]);
       }
     } catch (e) {
       console.error("HealthLog getHealthLogs:", e);
-      setMomentGroups(MOCK_HEALTH_LOG_GROUPS);
+      setMomentGroups([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [babyId]);
 
   // Load health logs khi babyId có sẵn
   useEffect(() => {
     if (babyId) {
       loadHealthLogs();
     }
-  }, [babyId]);
+  }, [babyId, loadHealthLogs]);
 
-  useEffect(() => {
-    const unsub = navigation.addListener("focus", () => {
-      const updated = route.params?.updatedMoment;
-      if (updated && updated.id) {
-        setMomentGroups((prev) =>
-          prev.map((g) => ({
-            ...g,
-            moments: g.moments.map((m) =>
-              m.id === updated.id ? { ...m, ...updated } : m,
-            ),
-          })),
-        );
-        navigation.setParams({ updatedMoment: undefined });
-      } else {
+  // Reload health logs mỗi khi màn hình được focus (quay lại từ màn hình khác)
+  useFocusEffect(
+    useCallback(() => {
+      if (babyId) {
         loadHealthLogs();
       }
-    });
-    return unsub;
-  }, [navigation, route.params?.updatedMoment, babyId]);
+    }, [babyId, loadHealthLogs]),
+  );
 
   const openEditMoment = (m) => {
     navigation.navigate("HealthLogAdd", { babyId, editMoment: m });
@@ -321,6 +321,22 @@ export default function HealthLogScreen({ route, navigation }) {
                       </View>
                     )}
 
+                  {m.activities &&
+                    Array.isArray(m.activities) &&
+                    m.activities.length > 0 && (
+                      <View style={styles.activityRow}>
+                        <Ionicons
+                          name="fitness-outline"
+                          size={16}
+                          color="#5A9B72"
+                          style={styles.activityIcon}
+                        />
+                        <Text style={styles.activityText} numberOfLines={2}>
+                          Hoạt động: {m.activities.join(", ")}
+                        </Text>
+                      </View>
+                    )}
+
                   {m.type === "health" && m.health && (
                     <View style={styles.healthInfo}>
                       {m.health.map((h, i) => (
@@ -331,6 +347,9 @@ export default function HealthLogScreen({ route, navigation }) {
                             color={colors.pinkAccent}
                             style={styles.healthIcon}
                           />
+                          {h.label && (
+                            <Text style={styles.healthLabel}>{h.label}</Text>
+                          )}
                           <Text style={styles.healthValue}>{h.value}</Text>
                         </View>
                       ))}
@@ -542,5 +561,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily,
     color: colors.textMuted,
+  },
+  activityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  activityIcon: { marginRight: 6 },
+  activityText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily,
+    color: "#5A9B72",
+    fontWeight: "500",
+  },
+  healthLabel: {
+    fontSize: 10,
+    fontFamily,
+    color: colors.textMuted,
+    marginTop: 2,
   },
 });

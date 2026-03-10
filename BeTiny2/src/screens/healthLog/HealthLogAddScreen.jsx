@@ -9,12 +9,16 @@ import {
   StatusBar,
   TextInput,
   Image,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { colors, typography } from "../../theme";
 import { createHealthLog, updateHealthLog } from "../../api/healthLogApi";
+import { uploadImage } from "../../api/uploadApi";
 import storage from "../../storage";
 
 const { fontFamily } = typography;
@@ -65,11 +69,79 @@ export default function HealthLogAddScreen({ route, navigation }) {
   const [detail, setDetail] = useState("");
   const [titleFocused, setTitleFocused] = useState(false);
   const [detailFocused, setDetailFocused] = useState(false);
-  const [weight, setWeight] = useState("");
+  const [eating, setEating] = useState("");
   const [temperature, setTemperature] = useState("");
-  const [height, setHeight] = useState("");
   const [sleepHours, setSleepHours] = useState("");
   const [symptomModalVisible, setSymptomModalVisible] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Request permissions on mount
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== "web") {
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Quyền truy cập",
+            "Cần quyền truy cập thư viện ảnh để tải ảnh lên",
+          );
+        }
+      }
+    })();
+  }, []);
+
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setUploading(true);
+
+        for (const asset of result.assets) {
+          const formData = new FormData();
+
+          // Create file object for upload
+          const uriParts = asset.uri.split(".");
+          const fileType = uriParts[uriParts.length - 1];
+
+          formData.append("image", {
+            uri:
+              Platform.OS === "ios"
+                ? asset.uri.replace("file://", "")
+                : asset.uri,
+            type: `image/${fileType}`,
+            name: `photo_${Date.now()}.${fileType}`,
+          });
+
+          try {
+            const response = await uploadImage(formData);
+
+            if (response && response.data && response.data.url) {
+              setPhotos((prev) => [...prev, response.data.url]);
+            }
+          } catch (uploadError) {
+            console.error("Upload error:", uploadError);
+            Alert.alert("Lỗi", "Không thể tải ảnh lên. Vui lòng thử lại.");
+          }
+        }
+
+        setUploading(false);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      setUploading(false);
+      Alert.alert("Lỗi", "Không thể chọn ảnh");
+    }
+  };
+
+  const handleRemovePhoto = (index) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     (async () => {
@@ -94,14 +166,11 @@ export default function HealthLogAddScreen({ route, navigation }) {
     else setActivity("play");
     if (editMoment.health && Array.isArray(editMoment.health)) {
       editMoment.health.forEach((h) => {
-        if (h.icon === "scale-outline")
-          setWeight(parseHealthValue(h.value, "kg"));
         if (h.icon === "thermometer-outline")
           setTemperature(parseHealthValue(h.value, "°C"));
-        if (h.icon === "resize-outline")
-          setHeight(parseHealthValue(h.value, "cm"));
         if (h.icon === "bed-outline")
           setSleepHours(parseHealthValue(h.value, "giờ"));
+        if (h.icon === "restaurant-outline") setEating(h.value || "");
       });
     }
     // Load from original backend data if available
@@ -110,6 +179,7 @@ export default function HealthLogAddScreen({ route, navigation }) {
         setTemperature(String(editMoment._original.tempurature));
       if (editMoment._original.sleep)
         setSleepHours(String(editMoment._original.sleep));
+      if (editMoment._original.eating) setEating(editMoment._original.eating);
     }
     if (editMoment.babyStatus) setBabyStatus(editMoment.babyStatus);
     if (editMoment.symptoms && Array.isArray(editMoment.symptoms)) {
@@ -188,11 +258,11 @@ export default function HealthLogAddScreen({ route, navigation }) {
           activities: activity
             ? [activity]
             : editMoment._original?.activities || [],
-          eating: editMoment._original?.eating || "",
+          eating: eating.trim() || editMoment._original?.eating || "",
           mood: babyStatus,
           notes:
             title.trim() || detail.trim()
-              ? `${title.trim()}\\n${detail.trim()}`.trim()
+              ? `${title.trim()}\n${detail.trim()}`.trim()
               : editMoment._original?.notes || "",
         };
 
@@ -226,11 +296,11 @@ export default function HealthLogAddScreen({ route, navigation }) {
           image_urls: photos.length > 0 ? photos : [],
           symptoms: selectedSymptoms,
           activities: activity ? [activity] : [],
-          eating: "", // Can be enhanced later
+          eating: eating.trim() || "",
           mood: babyStatus,
           notes:
             title.trim() || detail.trim()
-              ? `${title.trim()}\\n${detail.trim()}`.trim()
+              ? `${title.trim()}\n${detail.trim()}`.trim()
               : "",
         };
 
@@ -301,25 +371,40 @@ export default function HealthLogAddScreen({ route, navigation }) {
                   source={typeof p === "string" ? { uri: p } : p}
                   style={styles.photoImage}
                 />
+                <TouchableOpacity
+                  style={styles.photoRemoveBtn}
+                  onPress={() => handleRemovePhoto(index)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="close-circle" size={24} color="#FF6B6B" />
+                </TouchableOpacity>
               </View>
             ))}
             <TouchableOpacity
-              style={styles.photoPlaceholder}
+              style={[
+                styles.photoPlaceholder,
+                uploading && styles.photoPlaceholderDisabled,
+              ]}
               activeOpacity={0.8}
-              onPress={() => {
-                setPhotos((prev) => [
-                  ...prev,
-                  require("../../../assets/images/be.jpg"),
-                ]);
-              }}
+              onPress={handlePickImage}
+              disabled={uploading}
             >
-              <Ionicons
-                name="camera"
-                size={26}
-                color={colors.pinkAccent}
-                style={styles.photoIcon}
-              />
-              <Text style={styles.photoPlaceholderText}>Thêm ảnh</Text>
+              {uploading ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.pinkAccent} />
+                  <Text style={styles.photoPlaceholderText}>Đang tải...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons
+                    name="camera"
+                    size={26}
+                    color={colors.pinkAccent}
+                    style={styles.photoIcon}
+                  />
+                  <Text style={styles.photoPlaceholderText}>Thêm ảnh</Text>
+                </>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -472,28 +557,9 @@ export default function HealthLogAddScreen({ route, navigation }) {
           </View>
         </View>
 
-        <Text style={styles.label}>CHỈ SỐ SỨC KHỎE (NẾU CÓ)</Text>
+        <Text style={styles.label}>CHỈ SỐ SỨC KHỎE</Text>
         <View style={styles.inputGroup}>
           <View style={styles.healthRow}>
-            <View style={styles.healthCell}>
-              <Text style={styles.healthLabel}>Cân nặng</Text>
-              <View style={styles.healthInputWrap}>
-                <Ionicons
-                  name="scale-outline"
-                  size={18}
-                  color="#5CC1C0"
-                  style={styles.healthInputIcon}
-                />
-                <TextInput
-                  style={styles.healthInputField}
-                  placeholder="VD: 9 kg"
-                  placeholderTextColor={colors.textMuted}
-                  value={weight}
-                  onChangeText={setWeight}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
             <View style={styles.healthCell}>
               <Text style={styles.healthLabel}>Nhiệt độ</Text>
               <View style={styles.healthInputWrap}>
@@ -513,27 +579,6 @@ export default function HealthLogAddScreen({ route, navigation }) {
                 />
               </View>
             </View>
-          </View>
-          <View style={styles.healthRow}>
-            <View style={styles.healthCell}>
-              <Text style={styles.healthLabel}>Chiều cao</Text>
-              <View style={styles.healthInputWrap}>
-                <Ionicons
-                  name="resize-outline"
-                  size={18}
-                  color="#5CC1C0"
-                  style={styles.healthInputIcon}
-                />
-                <TextInput
-                  style={styles.healthInputField}
-                  placeholder="VD: 75 cm"
-                  placeholderTextColor={colors.textMuted}
-                  value={height}
-                  onChangeText={setHeight}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
             <View style={styles.healthCell}>
               <Text style={styles.healthLabel}>Giấc ngủ</Text>
               <View style={styles.healthInputWrap}>
@@ -545,11 +590,31 @@ export default function HealthLogAddScreen({ route, navigation }) {
                 />
                 <TextInput
                   style={styles.healthInputField}
-                  placeholder="VD: 12 h"
+                  placeholder="VD: 12 giờ"
                   placeholderTextColor={colors.textMuted}
                   value={sleepHours}
                   onChangeText={setSleepHours}
                   keyboardType="decimal-pad"
+                />
+              </View>
+            </View>
+          </View>
+          <View style={styles.healthRow}>
+            <View style={styles.healthCellFull}>
+              <Text style={styles.healthLabel}>Ăn uống</Text>
+              <View style={styles.healthInputWrap}>
+                <Ionicons
+                  name="restaurant-outline"
+                  size={18}
+                  color="#5CC1C0"
+                  style={styles.healthInputIcon}
+                />
+                <TextInput
+                  style={styles.healthInputField}
+                  placeholder="VD: Ăn tốt, uống sữa 180ml"
+                  placeholderTextColor={colors.textMuted}
+                  value={eating}
+                  onChangeText={setEating}
                 />
               </View>
             </View>
@@ -655,10 +720,23 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     backgroundColor: "#F3F4F6",
+    position: "relative",
   },
   photoImage: {
     width: "100%",
     height: "100%",
+  },
+  photoRemoveBtn: {
+    position: "absolute",
+    top: -8,
+    right: -8,
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   photoPlaceholder: {
     width: 90,
@@ -670,6 +748,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
     alignItems: "center",
     justifyContent: "center",
+  },
+  photoPlaceholderDisabled: {
+    opacity: 0.6,
   },
   photoIcon: { marginBottom: 8 },
   photoPlaceholderText: {
