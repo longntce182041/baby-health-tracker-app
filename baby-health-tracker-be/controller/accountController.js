@@ -46,6 +46,8 @@ const register = async (req, res) => {
 
     const transporter = nodemailer.createTransport({
       service: "Gmail",
+      port: 465, // Bắt buộc dùng 465 hoặc 587
+  secure: true, // true cho 465, false cho 587
       auth: {
         user: process.env.EMAIL_USER || "betiny10092005@gmail.com",
         pass: process.env.EMAIL_PASS || "srii tkdr scdj jxpo",
