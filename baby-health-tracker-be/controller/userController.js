@@ -210,6 +210,58 @@ const viewParentProfile = async (req, res) => {
     }
 };
 
+const updateWalletPoints = async (req, res) => {
+    try {
+        const accountId = req.user ? req.user.account_id : null;
+        if (!accountId) {
+            return res.status(401).json({ message: 'Missing token' });
+        }
+
+        const account = await accountService.findAccountById(accountId);
+        if (!account) {
+            return res.status(404).json({ message: 'Account not found' });
+        }
+
+        if (account.role !== 'parent' || !account.parent_id) {
+            return res.status(403).json({ message: 'Parent role required' });
+        }
+
+        const { action, points } = req.body;
+        const parsedPoints = Number(points);
+
+        if (!action || !['add', 'subtract'].includes(action)) {
+            return res.status(400).json({ message: 'action must be add or subtract' });
+        }
+
+        if (!Number.isFinite(parsedPoints) || parsedPoints <= 0) {
+            return res.status(400).json({ message: 'points must be a positive number' });
+        }
+
+        let parent = null;
+        if (action === 'add') {
+            parent = await parentService.addWalletPoints(account.parent_id, parsedPoints);
+        } else {
+            parent = await parentService.deductWalletPoints(account.parent_id, parsedPoints);
+            if (!parent) {
+                return res.status(400).json({
+                    message: `Insufficient wallet points. Need at least ${parsedPoints} points`,
+                });
+            }
+        }
+
+        return res.status(200).json({
+            message: 'Wallet points updated successfully',
+            data: {
+                wallet_points: parent.wallet_points,
+                action,
+                points: parsedPoints,
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 const adminListParents = async (req, res) => {
     try {
         const parentAccounts = await accountService.listAccountsByRole('parent');
@@ -595,6 +647,7 @@ module.exports = {
     updateProfile,
     changePassword,
     viewParentProfile,
+    updateWalletPoints,
     adminListParents,
     adminGetParentDetail,
     adminUpdateParent,

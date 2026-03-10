@@ -21,6 +21,8 @@ const {
 
 const router = express.Router();
 
+router.use("/payments", paymentRoutes);
+
 router.post("/register", accountController.register);
 router.post("/verify-otp", accountController.verifyOtp);
 router.post("/login", accountController.login);
@@ -223,6 +225,12 @@ router.get(
   authenticateToken,
   requireParent,
   userController.viewParentProfile,
+);
+router.patch(
+  "/wallet/points",
+  authenticateToken,
+  requireParent,
+  userController.updateWalletPoints,
 );
 router.put("/profile", authenticateToken, userController.updateProfile);
 router.put(

@@ -55,6 +55,7 @@ const PAYMENT_ICONS = [
 export default function TopUpPointsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
+  const currentWalletPoints = user?.wallet_points ?? user?.data?.wallet_points ?? 0;
   const [selectedPackageId, setSelectedPackageId] = useState("p2");
   const [isProcessing, setIsProcessing] = useState(false);
   const [token, setToken] = useState(null);
@@ -125,8 +126,8 @@ export default function TopUpPointsScreen({ navigation }) {
       Alert.alert(
         "Lỗi thanh toán",
         error.response?.data?.message ||
-          error.message ||
-          "Có lỗi xảy ra khi tạo thanh toán. Vui lòng thử lại.",
+        error.message ||
+        "Có lỗi xảy ra khi tạo thanh toán. Vui lòng thử lại.",
       );
       setIsProcessing(false);
     }
@@ -160,7 +161,7 @@ export default function TopUpPointsScreen({ navigation }) {
               style={styles.balancePillIcon}
             />
             <Text style={styles.balancePillText}>
-              {user?.wallet_points ?? 0}
+              {currentWalletPoints}
             </Text>
           </View>
         </View>

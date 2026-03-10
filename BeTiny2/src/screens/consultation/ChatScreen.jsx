@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,36 +9,200 @@ import {
   ScrollView,
   TextInput,
   KeyboardAvoidingView,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography } from '../../theme';
+import { useFocusEffect } from '@react-navigation/native';
+import { io } from 'socket.io-client';
+import {
+  getConversation,
+  sendMessageToDoctor,
+} from '../../api/consultationApi';
+import { SOCKET_URL } from '../../api/api';
 
 const { fontFamily } = typography;
 
-const MOCK_MESSAGES = [
-  { id: '1', from: 'dr', text: 'Bé hôm nay thế nào rồi ạ? Mẹ có thấy bé sốt thêm không?', time: '09:30' },
-  { id: '2', from: 'user', text: 'Chào bác sĩ, bé ăn khỏe lắm ạ! Nhưng em thấy trên người bé có vài nốt mẩn đỏ.', time: '09:32' },
-  { id: '3', from: 'dr', text: 'Mẹ chụp ảnh vùng da bị mẩn đỏ gửi bác xem nhé!', time: '09:33' },
-];
-
 export default function ChatScreen({ route, navigation }) {
-  const { doctor } = route.params || {};
+  const { doctor, doctorId } = route.params || {};
   const insets = useSafeAreaInsets();
-  const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [conversationMissing, setConversationMissing] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [currentConsultationId, setCurrentConsultationId] = useState(null);
+  const scrollViewRef = useRef(null);
+  const socketRef = useRef(null);
+
+  const mappedDoctorId = doctorId || doctor?._id || doctor?.doctor_id || doctor?.id;
 
   const doctorName = doctor?.full_name || 'Bác sĩ Nguyên';
   const displayName = doctorName.startsWith('Bác sĩ') ? doctorName : `BS. ${doctorName}`;
   const initial = (doctor?.full_name || 'B').charAt(0).toUpperCase();
 
-  const sendMessage = () => {
+  const toDisplayMessage = (item) => ({
+    id: item?._id || `${item?.timestamp || Date.now()}-${Math.random()}`,
+    from: item?.sender === 'doctor' ? 'dr' : 'user',
+    text: item?.content || '',
+    time: new Date(item?.timestamp || Date.now()).toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  });
+
+  const loadConversation = async (silent = false) => {
+    if (!mappedDoctorId) {
+      setLoading(false);
+      setConversationMissing(true);
+      return;
+    }
+
+    if (!silent) {
+      setLoading(true);
+    }
+    try {
+      const res = await getConversation(mappedDoctorId);
+      const messageList = Array.isArray(res?.data?.messages)
+        ? res.data.messages.map(toDisplayMessage)
+        : [];
+
+      setMessages(messageList);
+      setCurrentConsultationId(res?.data?.consultation_id || null);
+      setConversationMissing(false);
+    } catch (error) {
+      if (error?.response?.status === 404) {
+        setConversationMissing(true);
+        setMessages([]);
+      } else {
+        Alert.alert('Loi', 'Khong the tai tin nhan. Vui long thu lai.');
+      }
+    } finally {
+      if (!silent) {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadConversation();
+  }, [mappedDoctorId]);
+
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket'],
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !currentConsultationId) {
+      return undefined;
+    }
+
+    socket.emit('join:consultation', currentConsultationId);
+
+    const onIncomingMessage = (payload) => {
+      if (payload?.consultation_id !== String(currentConsultationId)) {
+        return;
+      }
+      if (payload?.conversation?.messages) {
+        setMessages(payload.conversation.messages.map(toDisplayMessage));
+      } else {
+        loadConversation(true);
+      }
+    };
+
+    socket.on('conversation:message', onIncomingMessage);
+
+    return () => {
+      socket.off('conversation:message', onIncomingMessage);
+      socket.emit('leave:consultation', currentConsultationId);
+    };
+  }, [currentConsultationId]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!mappedDoctorId) return undefined;
+
+      const pollId = setInterval(() => {
+        if (!sending) {
+          loadConversation(true);
+        }
+      }, 3000);
+
+      return () => clearInterval(pollId);
+    }, [mappedDoctorId, sending]),
+  );
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event?.endCoordinates?.height || 0);
+      setTimeout(() => {
+        if (scrollViewRef.current) {
+          scrollViewRef.current.scrollToEnd({ animated: true });
+        }
+      }, 50);
+    });
+
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+
+  const sendMessage = async () => {
     if (!inputText.trim()) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: String(Date.now()), from: 'user', text: inputText.trim(), time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) },
-    ]);
-    setInputText('');
+    if (!mappedDoctorId) {
+      Alert.alert('Loi', 'Khong tim thay thong tin bac si.');
+      return;
+    }
+
+    try {
+      setSending(true);
+      const content = inputText.trim();
+      setInputText('');
+      await sendMessageToDoctor(mappedDoctorId, content);
+      await loadConversation();
+    } catch (error) {
+      const statusCode = error?.response?.status;
+      const message = error?.response?.data?.message;
+      if (statusCode === 404) {
+        setConversationMissing(true);
+        Alert.alert(
+          'Chua the chat',
+          'Ban can dat lich tu van truoc khi nhan tin voi bac si nay.',
+        );
+      } else {
+        Alert.alert('Loi', message || 'Gui tin nhan that bai.');
+      }
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -46,8 +210,8 @@ export default function ChatScreen({ route, navigation }) {
       {Platform.OS === 'android' && <StatusBar backgroundColor={colors.white} barStyle="dark-content" />}
       <KeyboardAvoidingView
         style={styles.keyboard}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
         <View style={[styles.chatHeader, { paddingTop: insets.top + 12, paddingBottom: 14 }]}>
           <View style={styles.drProfile}>
@@ -73,14 +237,39 @@ export default function ChatScreen({ route, navigation }) {
         </View>
 
         <ScrollView
+          ref={scrollViewRef}
           style={styles.chatContainer}
           contentContainerStyle={[styles.chatContent, { paddingBottom: 16 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() => {
+            if (scrollViewRef.current) {
+              scrollViewRef.current.scrollToEnd({ animated: true });
+            }
+          }}
         >
           <View style={styles.datePill}>
             <Text style={styles.datePillText}>HÔM NAY</Text>
           </View>
+          {loading && (
+            <View style={styles.loadingInline}>
+              <ActivityIndicator size="small" color={colors.pinkAccent} />
+            </View>
+          )}
+          {!loading && conversationMissing && (
+            <View style={styles.emptyStateBox}>
+              <Text style={styles.emptyStateText}>
+                Chua co cuoc tro chuyen. Hay dat lich tu van truoc de bat dau chat.
+              </Text>
+            </View>
+          )}
+          {!loading && !conversationMissing && messages.length === 0 && (
+            <View style={styles.emptyStateBox}>
+              <Text style={styles.emptyStateText}>
+                Chua co tin nhan. Ban hay gui tin nhan dau tien.
+              </Text>
+            </View>
+          )}
           {messages.map((msg) => (
             <View
               key={msg.id}
@@ -92,7 +281,17 @@ export default function ChatScreen({ route, navigation }) {
           ))}
         </ScrollView>
 
-        <View style={[styles.inputArea, { paddingBottom: insets.bottom + 12 }]}>
+        <View
+          style={[
+            styles.inputArea,
+            {
+              paddingBottom:
+                insets.bottom +
+                12 +
+                (Platform.OS === 'android' ? keyboardHeight : 0),
+            },
+          ]}
+        >
           <TouchableOpacity style={styles.attachBtn} activeOpacity={0.7}>
             <Ionicons name="add-circle-outline" size={28} color="#BBB" />
           </TouchableOpacity>
@@ -104,9 +303,19 @@ export default function ChatScreen({ route, navigation }) {
             onChangeText={setInputText}
             multiline
             maxLength={500}
+            editable={!sending}
           />
-          <TouchableOpacity style={styles.sendBtn} onPress={sendMessage} activeOpacity={0.85}>
-            <Ionicons name="send" size={20} color={colors.white} />
+          <TouchableOpacity
+            style={[styles.sendBtn, sending && styles.sendBtnDisabled]}
+            onPress={sendMessage}
+            activeOpacity={0.85}
+            disabled={sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Ionicons name="send" size={20} color={colors.white} />
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -157,6 +366,27 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   datePillText: { fontSize: 11, fontFamily, fontWeight: '600', color: '#AAA' },
+  loadingInline: {
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyStateBox: {
+    marginTop: 12,
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    alignSelf: 'center',
+    maxWidth: '90%',
+  },
+  emptyStateText: {
+    fontSize: 13,
+    fontFamily,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   msgBubble: {
     maxWidth: '80%',
     paddingVertical: 12,
@@ -228,5 +458,8 @@ const styles = StyleSheet.create({
       ios: { shadowColor: colors.blueAccent, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.3, shadowRadius: 12 },
       android: { elevation: 4 },
     }),
+  },
+  sendBtnDisabled: {
+    opacity: 0.7,
   },
 });

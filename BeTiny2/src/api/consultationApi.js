@@ -91,14 +91,15 @@ export const getConsultationDoctors = () => {
   return api.get("/consultation-doctors");
 };
 
-export const sendMessageToDoctor = (doctorId, babyId, content) => {
-  return api.post("/conversations/send", {
+export const sendMessageToDoctor = async (doctorId, content) => {
+  const res = await api.post("/conversations/send", {
     doctor_id: doctorId,
-    baby_id: babyId,
     content,
   });
+  return res.data;
 };
 
-export const getConversation = (doctorId, babyId) => {
-  return api.get(`/conversations?doctor_id=${doctorId}&baby_id=${babyId}`);
+export const getConversation = async (doctorId) => {
+  const res = await api.get(`/conversations?doctor_id=${doctorId}`);
+  return res.data;
 };

@@ -155,6 +155,11 @@ export const updateProfile = (data) => {
   return api.put("/profile", data);
 };
 
+export const updateWalletPoints = async (action, points) => {
+  const res = await api.patch("/wallet/points", { action, points });
+  return res.data;
+};
+
 export const changePassword = (current_password, new_password) => {
   return api.put("/profile/password", {
     current_password,

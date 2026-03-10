@@ -150,19 +150,19 @@ export default function DoctorDetailScreen({ route, navigation }) {
   const hasSchedules = Array.isArray(schedules) && schedules.length > 0;
   const scheduleList = hasSchedules
     ? schedules.slice(0, 7).map((s) => {
-        const scheduleDate = s.date || s.available_date;
-        const timeSlot =
-          s.time_slot ||
-          (s.slots && s.slots.length > 0
-            ? s.slots
-                .map((slot) => `${slot.start_time}-${slot.end_time}`)
-                .join(", ")
-            : "—");
-        return {
-          day: getDayName(scheduleDate),
-          time: timeSlot,
-        };
-      })
+      const scheduleDate = s.date || s.available_date;
+      const timeSlot =
+        s.time_slot ||
+        (s.slots && s.slots.length > 0
+          ? s.slots
+            .map((slot) => `${slot.start_time}-${slot.end_time}`)
+            .join(", ")
+          : "—");
+      return {
+        day: getDayName(scheduleDate),
+        time: timeSlot,
+      };
+    })
     : [{ day: "—", time: "Chưa có lịch" }];
   const canBook = hasFee && hasSchedules;
 
@@ -305,21 +305,17 @@ export default function DoctorDetailScreen({ route, navigation }) {
         </View>
       </ScrollView>
 
-      {(doctor.is_consulting === true ||
-        doctor.status === "busy" ||
-        doctor.status === "consulting") && (
-        <TouchableOpacity
-          style={[styles.chatFab, { bottom: (insets.bottom || 16) + 100 }]}
-          onPress={() => navigation.navigate("Chat", { doctorId: id, doctor })}
-          activeOpacity={0.9}
-        >
-          <Ionicons
-            name="chatbubble-ellipses-outline"
-            size={26}
-            color={colors.pinkAccent}
-          />
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={[styles.chatFab, { bottom: (insets.bottom || 16) + 100 }]}
+        onPress={() => navigation.navigate("Chat", { doctorId: id, doctor })}
+        activeOpacity={0.9}
+      >
+        <Ionicons
+          name="chatbubble-ellipses-outline"
+          size={26}
+          color={colors.pinkAccent}
+        />
+      </TouchableOpacity>
 
       <View style={[styles.bookingBar, { paddingBottom: insets.bottom + 20 }]}>
         <View style={styles.feeWrap}>

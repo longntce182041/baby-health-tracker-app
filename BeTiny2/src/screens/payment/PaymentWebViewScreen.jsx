@@ -24,6 +24,7 @@ export default function PaymentWebViewScreen({ route, navigation }) {
   const { refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
+  const [handledPaymentResult, setHandledPaymentResult] = useState(false);
   const webViewRef = useRef(null);
 
   const { paymentUrl, orderCode } = route.params;
@@ -36,13 +37,16 @@ export default function PaymentWebViewScreen({ route, navigation }) {
     console.log("WebView navigated to:", url);
 
     // Check if user reached success page
-    if (url.includes("success.payos.vn") || url.includes("payment-success")) {
+    if (
+      !handledPaymentResult &&
+      (url.includes("success.payos.vn") || url.includes("payment-success"))
+    ) {
+      setHandledPaymentResult(true);
       console.log("Payment success detected!");
       console.log("Order code:", orderCode);
 
-      // Refresh user points
+      // Complete transaction first, then refresh profile to get updated points.
       try {
-        await refreshUser();
         const pendingPayment = await AsyncStorage.getItem("pendingPayment");
         if (pendingPayment) {
           const { transactionId } = JSON.parse(pendingPayment);
@@ -50,6 +54,7 @@ export default function PaymentWebViewScreen({ route, navigation }) {
           await updateTransactionStatus(transactionId, "completed");
           await AsyncStorage.removeItem("pendingPayment");
         }
+        await refreshUser();
         // Show success message
         Alert.alert(
           "Thành công!",
@@ -80,7 +85,11 @@ export default function PaymentWebViewScreen({ route, navigation }) {
     }
 
     // Check if user cancelled payment
-    if (url.includes("cancel.payos.vn") || url.includes("payment-cancel")) {
+    if (
+      !handledPaymentResult &&
+      (url.includes("cancel.payos.vn") || url.includes("payment-cancel"))
+    ) {
+      setHandledPaymentResult(true);
       console.log("Payment cancelled detected!");
 
       Alert.alert(
