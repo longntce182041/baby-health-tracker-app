@@ -52,7 +52,7 @@ const register = async (req, res) => {
       },
     });
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: "betiny10092005@gmail.com",
       to: email,
       subject: "Your OTP Code",
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
@@ -179,7 +179,7 @@ const forgotPassword = async (req, res) => {
       },
     });
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from:  "betiny10092005@gmail.com",
       to: email,
       subject: "Reset password OTP",
       text: `Your OTP code is ${otp}. It will expire in ${OTP_EXPIRY_MINUTES} minutes.`,
