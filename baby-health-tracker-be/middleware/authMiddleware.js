@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const config = require('../configs/Config');
 
-const getJwtSecret = () => process.env.JWT_SECRET || '12345-67890-09876-54321';
+const getJwtSecret = () => config.JWT_SECRET;
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers.authorization || '';
