@@ -4,6 +4,8 @@ import {
     getConsultationConversation,
     sendDoctorMessage,
 } from "../../api/conversationApi";
+import { io } from "socket.io-client";
+import { SOCKET_URL } from "../../api/api";
 
 const formatClock = (value) => {
     if (!value) return "--:--";
@@ -24,6 +26,7 @@ function DoctorChatPage({ consultation, onBack }) {
     const [sending, setSending] = useState(false);
     const [ending, setEnding] = useState(false);
     const listRef = useRef(null);
+    const socketRef = useRef(null);
 
     const consultationId = consultation?.consultationId;
 
@@ -57,6 +60,42 @@ function DoctorChatPage({ consultation, onBack }) {
         return () => {
             mounted = false;
             clearInterval(intervalId);
+        };
+    }, [consultationId]);
+
+    useEffect(() => {
+        const socket = io(SOCKET_URL, { transports: ["websocket"] });
+        socketRef.current = socket;
+
+        return () => {
+            socket.disconnect();
+            socketRef.current = null;
+        };
+    }, []);
+
+    useEffect(() => {
+        const socket = socketRef.current;
+        if (!socket || !consultationId) {
+            return undefined;
+        }
+
+        socket.emit("join:consultation", consultationId);
+
+        const onIncomingMessage = (payload) => {
+            if (payload?.consultation_id !== String(consultationId)) {
+                return;
+            }
+
+            if (payload?.conversation) {
+                setConversation(payload.conversation);
+            }
+        };
+
+        socket.on("conversation:message", onIncomingMessage);
+
+        return () => {
+            socket.off("conversation:message", onIncomingMessage);
+            socket.emit("leave:consultation", consultationId);
         };
     }, [consultationId]);
 

@@ -25,7 +25,7 @@ import { colors, typography } from "../../theme";
 
 const { fontFamily } = typography;
 
-const MOCK_FEE = 10;
+const CONSULTATION_FEE = 50;
 
 const DAY_LABELS = ["Cn", "T2", "T3", "T4", "T5", "T6", "T7"];
 
@@ -51,7 +51,8 @@ function sanitizeReason(text) {
 export default function ConsultationScreen({ route, navigation }) {
   const { doctorId, doctor } = route.params || {};
   const insets = useSafeAreaInsets();
-  const { isLoggedIn, user } = useAuth();
+  const { isLoggedIn, user, refreshUser } = useAuth();
+  const currentWalletPoints = user?.wallet_points ?? user?.data?.wallet_points ?? 0;
   const timeGap = 10;
   const [babies, setBabies] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -88,9 +89,9 @@ export default function ConsultationScreen({ route, navigation }) {
 
         const schRes = doctorId
           ? await getDoctorSchedules(doctorId).catch(() => ({
-              success: false,
-              data: [],
-            }))
+            success: false,
+            data: [],
+          }))
           : { success: false, data: [] };
         console.log("ConsultationScreen schedules response:", schRes);
         setSchedules(Array.isArray(schRes?.data) ? schRes.data : []);
@@ -183,10 +184,10 @@ export default function ConsultationScreen({ route, navigation }) {
       "Found schedule for date:",
       schedule
         ? {
-            date: schedule.date,
-            status: schedule.status,
-            slots_count: schedule.slots?.length,
-          }
+          date: schedule.date,
+          status: schedule.status,
+          slots_count: schedule.slots?.length,
+        }
         : "NO SCHEDULE FOUND",
     );
 
@@ -294,6 +295,14 @@ export default function ConsultationScreen({ route, navigation }) {
       return;
     }
 
+    if (currentWalletPoints < CONSULTATION_FEE) {
+      Alert.alert(
+        "Không đủ điểm",
+        `Bạn cần tối thiểu ${CONSULTATION_FEE} điểm để đặt lịch tư vấn. Vui lòng nạp thêm điểm.`,
+      );
+      return;
+    }
+
     // Parse time slot to extract start_time and end_time
     const [start_time, end_time] = selectedTimeSlot
       ? selectedTimeSlot.split(" - ")
@@ -359,9 +368,20 @@ export default function ConsultationScreen({ route, navigation }) {
       console.log("Create consultation result:", result);
 
       if (result?.success !== false && result?.data) {
+        const deductedPoints = result?.data?.deducted_points ?? CONSULTATION_FEE;
+        const remainingPoints = result?.data?.wallet_points;
+
+        try {
+          await refreshUser();
+        } catch (refreshError) {
+          console.warn("Refresh user after booking failed:", refreshError);
+        }
+
         Alert.alert(
           "Thành công",
-          "Đã đặt lịch tư vấn. Bác sĩ sẽ liên hệ với bạn qua tính năng nhắn tin.",
+          remainingPoints !== undefined
+            ? `Đã đặt lịch tư vấn và trừ ${deductedPoints} điểm. Số dư còn lại: ${remainingPoints} điểm.`
+            : `Đã đặt lịch tư vấn và trừ ${deductedPoints} điểm.`,
           [
             {
               text: "OK",
@@ -439,7 +459,7 @@ export default function ConsultationScreen({ route, navigation }) {
             activeOpacity={0.8}
           >
             <Text style={styles.pointsPillText}>
-              {user?.wallet_points ?? 0}
+              {currentWalletPoints}
             </Text>
             <Ionicons
               name="add"
@@ -728,7 +748,7 @@ export default function ConsultationScreen({ route, navigation }) {
               5. Phí tư vấn
             </Text>
             <Text style={styles.feeValue} numberOfLines={1}>
-              {doctor?.consultation_fee ?? MOCK_FEE} Điểm
+              {doctor?.consultation_fee ?? CONSULTATION_FEE} Điểm
             </Text>
           </View>
 

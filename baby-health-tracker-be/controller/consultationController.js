@@ -3,6 +3,9 @@ const doctorService = require("../services/doctorService");
 const doctorScheduleService = require("../services/doctorScheduleService");
 const consultationService = require("../services/consultationService");
 const conversationService = require("../services/conversationService");
+const parentService = require("../services/parentService");
+
+const CONSULTATION_BOOKING_FEE = 50;
 
 const scheduleConsultation = async (req, res) => {
   const { doctor_id, baby_id, date, start_time, end_time, notes } = req.body;
@@ -110,13 +113,6 @@ const scheduleConsultation = async (req, res) => {
         .json({ message: "You have already booked this time slot" });
     }
 
-    // Add parent to patient_ids array
-    if (!schedule.slots[slotIndex].patient_ids) {
-      schedule.slots[slotIndex].patient_ids = [];
-    }
-    schedule.slots[slotIndex].patient_ids.push(parentId);
-    await schedule.save();
-
     const consultationTime = new Date(scheduleDate);
     const [hourStr, minuteStr] = start_time.split(":");
     if (!hourStr || !minuteStr) {
@@ -126,41 +122,80 @@ const scheduleConsultation = async (req, res) => {
     }
     consultationTime.setHours(Number(hourStr), Number(minuteStr), 0, 0);
 
-    const consultation = await consultationService.createConsultation({
-      parent_id: parentId,
-      baby_id,
-      doctor_id,
-      schedule_id: schedule._id,
-      status: "waiting",
-      consultation_time: consultationTime,
-      notes,
-    });
+    const updatedParent = await parentService.deductWalletPoints(
+      parentId,
+      CONSULTATION_BOOKING_FEE,
+    );
 
-    // Create conversation and add initial message from parent with notes
-    const conversation =
-      await conversationService.createConversationWithConsultation(
-        parentId,
-        doctor_id,
-        baby_id,
-        consultation._id,
-      );
-
-    // Add initial message with notes as first message
-    if (notes) {
-      await conversationService.addMessageToConversation(conversation._id, {
-        sender: "parent",
-        content: notes,
-        status: "sent",
-        timestamp: new Date(),
+    if (!updatedParent) {
+      return res.status(400).json({
+        message: `Insufficient points. You need at least ${CONSULTATION_BOOKING_FEE} points to book a consultation`,
       });
     }
 
-    return res
-      .status(201)
-      .json({
-        message: "Consultation scheduled successfully",
-        data: consultation,
+    let hasReservedSlot = false;
+
+    try {
+      // Reserve slot only after point deduction succeeds.
+      if (!schedule.slots[slotIndex].patient_ids) {
+        schedule.slots[slotIndex].patient_ids = [];
+      }
+      schedule.slots[slotIndex].patient_ids.push(parentId);
+      await schedule.save();
+      hasReservedSlot = true;
+
+      const consultation = await consultationService.createConsultation({
+        parent_id: parentId,
+        baby_id,
+        doctor_id,
+        schedule_id: schedule._id,
+        status: "waiting",
+        consultation_time: consultationTime,
+        notes,
       });
+
+      // Create conversation and add initial message from parent with notes
+      const conversation =
+        await conversationService.createConversationWithConsultation(
+          parentId,
+          doctor_id,
+          baby_id,
+          consultation._id,
+        );
+
+      // Add initial message with notes as first message
+      if (notes) {
+        await conversationService.addMessageToConversation(conversation._id, {
+          sender: "parent",
+          content: notes,
+          status: "sent",
+          timestamp: new Date(),
+        });
+      }
+
+      return res
+        .status(201)
+        .json({
+          message: "Consultation scheduled successfully",
+          data: {
+            ...consultation.toObject(),
+            deducted_points: CONSULTATION_BOOKING_FEE,
+            wallet_points: updatedParent.wallet_points,
+          },
+        });
+    } catch (bookingError) {
+      if (hasReservedSlot) {
+        const rollbackSlot = schedule.slots[slotIndex];
+        rollbackSlot.patient_ids = (rollbackSlot.patient_ids || []).filter(
+          (id) => id.toString() !== parentId.toString(),
+        );
+        await schedule.save();
+      }
+
+      await parentService.addWalletPoints(parentId, CONSULTATION_BOOKING_FEE);
+
+      throw bookingError;
+    }
   } catch (error) {
     return res
       .status(500)
