@@ -6,6 +6,8 @@ const EmailOtp = require("../models/email_otps");
 const accountService = require("../services/accountService");
 const parentService = require("../services/parentService");
 const config = require("../configs/Config");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const OTP_EXPIRY_MINUTES = 10;
 const generateOtp = () => crypto.randomInt(10000, 99999).toString();
@@ -33,7 +35,7 @@ const register = async (req, res) => {
       role: "parent",
     };
     const newAccount = await accountService.createAccount(accountData);
-console.log("1");
+    console.log("1");
     //sent otp to email
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
@@ -44,32 +46,47 @@ console.log("1");
       expires_at: expiresAt,
       used: false,
     });
-console.log("2");
-    const transporter = nodemailer.createTransport({
-      service: "Gmail",
-      port: 465, // Bắt buộc dùng 465 hoặc 587
-      secure: true, // true cho 465, false cho 587
-      auth: {
-        user: config.EMAIL_USER,
-        pass: config.EMAIL_PASS,
-      },
-    });
-    console.log("3");
-    try{
-    await transporter.sendMail({
-      from: config.EMAIL_USER,
-      to: email,
-      subject: "Your OTP Code",
-      text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
-    });
-    console.log("4");
-      } catch (mailError) {
-      console.error("LỖI GỬI MAIL CHI TIẾT:", mailError);
-      throw mailError; // Ném lỗi ra ngoài để block catch tổng bắt được
+    console.log("2");
+    // const transporter = nodemailer.createTransport({
+    //   service: "Gmail",
+    //   port: 465, // Bắt buộc dùng 465 hoặc 587
+    //   secure: true, // true cho 465, false cho 587
+    //   auth: {
+    //     user: config.EMAIL_USER,
+    //     pass: config.EMAIL_PASS,
+    //   },
+    // });
+    // console.log("3");
+    // try{
+    // await transporter.sendMail({
+    //   from: config.EMAIL_USER,
+    //   to: email,
+    //   subject: "Your OTP Code",
+    //   text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
+    // });
+    // console.log("4");
+    //   } catch (mailError) {
+    //   console.error("LỖI GỬI MAIL CHI TIẾT:", mailError);
+    //   throw mailError; // Ném lỗi ra ngoài để block catch tổng bắt được
+    // }
+    try {
+      console.log("3 - Bắt đầu gửi mail qua Resend API...");
+
+      await resend.emails.send({
+        from: "onboarding@resend.dev", // Email mặc định để test của Resend
+        to: email, // Email của phụ huynh
+        subject: "Your OTP Code",
+        text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
+      });
+
+      console.log("4 - Gửi mail thành công");
+      res
+        .status(201)
+        .json({ message: "Account created successfully. OTP sent." });
+    } catch (error) {
+      console.error("Lỗi gửi mail API:", error);
+      res.status(500).json({ message: "Failed to send OTP email" });
     }
-    res
-      .status(201)
-      .json({ message: "Account created successfully. OTP sent to email." });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
