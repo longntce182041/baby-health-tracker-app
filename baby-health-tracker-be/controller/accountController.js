@@ -33,7 +33,7 @@ const register = async (req, res) => {
       role: "parent",
     };
     const newAccount = await accountService.createAccount(accountData);
-
+console.log("1");
     //sent otp to email
     const otp = generateOtp();
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
@@ -44,7 +44,7 @@ const register = async (req, res) => {
       expires_at: expiresAt,
       used: false,
     });
-
+console.log("2");
     const transporter = nodemailer.createTransport({
       service: "Gmail",
       port: 465, // Bắt buộc dùng 465 hoặc 587
@@ -54,12 +54,14 @@ const register = async (req, res) => {
         pass: config.EMAIL_PASS,
       },
     });
+    console.log("3");
     await transporter.sendMail({
       from: config.EMAIL_USER,
       to: email,
       subject: "Your OTP Code",
       text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
     });
+    console.log("4");
     res
       .status(201)
       .json({ message: "Account created successfully. OTP sent to email." });
