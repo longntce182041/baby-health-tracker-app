@@ -362,22 +362,20 @@ export default function DoctorListScreen({ navigation }) {
                       color={colors.white}
                     />
                   </TouchableOpacity>
-                  {consulting && (
-                    <TouchableOpacity
-                      style={styles.cardActionBtn}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        navigation.navigate("Chat", { doctorId, doctor: item });
-                      }}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons
-                        name="chatbubble-ellipses-outline"
-                        size={18}
-                        color={colors.white}
-                      />
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity
+                    style={styles.cardActionBtn}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      navigation.navigate("Chat", { doctorId, doctor: item });
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name="chatbubble-ellipses-outline"
+                      size={18}
+                      color={colors.white}
+                    />
+                  </TouchableOpacity>
                 </View>
                 <View style={styles.statusRow}>
                   <View

@@ -1,6 +1,28 @@
 const babyService = require('../services/babyService');
 const doctorService = require('../services/doctorService');
 const conversationService = require('../services/conversationService');
+const { getSocketIO } = require('../socket');
+
+const emitConversationUpdated = (conversation, message) => {
+    const io = getSocketIO();
+    if (!io || !conversation) {
+        return;
+    }
+
+    const consultationId = conversation.consultation_id
+        ? conversation.consultation_id.toString()
+        : null;
+
+    if (!consultationId) {
+        return;
+    }
+
+    io.to(`consultation:${consultationId}`).emit('conversation:message', {
+        consultation_id: consultationId,
+        message,
+        conversation,
+    });
+};
 
 const sendMessage = async (req, res) => {
     const userRole = req.user ? req.user.role : null;
@@ -55,6 +77,8 @@ const sendMessage = async (req, res) => {
 
             const updatedConversation = await conversationService.addMessageToConversation(conversation._id, message);
 
+            emitConversationUpdated(updatedConversation, message);
+
             return res.status(201).json({ message: 'Message sent', data: updatedConversation });
         }
         // Handle doctor sending message to parent
@@ -102,6 +126,8 @@ const sendMessage = async (req, res) => {
             };
 
             const updatedConversation = await conversationService.addMessageToConversation(conversation._id, message);
+
+            emitConversationUpdated(updatedConversation, message);
 
             return res.status(201).json({ message: 'Message sent', data: updatedConversation });
         }
@@ -154,6 +180,8 @@ const sendMessageAsParent = async (req, res) => {
 
         const updatedConversation = await conversationService.addMessageToConversation(conversation._id, message);
 
+        emitConversationUpdated(updatedConversation, message);
+
         return res.status(201).json({ message: 'Message sent', data: updatedConversation });
     } catch (error) {
         return res.status(500).json({ message: 'Server error', error: error.message });
@@ -199,6 +227,8 @@ const sendMessageAsDoctor = async (req, res) => {
         };
 
         const updatedConversation = await conversationService.addMessageToConversation(conversation._id, message);
+
+        emitConversationUpdated(updatedConversation, message);
 
         return res.status(201).json({ message: 'Message sent', data: updatedConversation });
     } catch (error) {

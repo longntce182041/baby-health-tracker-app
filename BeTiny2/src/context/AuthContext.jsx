@@ -6,6 +6,11 @@ import { navigationRef } from "../navigation/navigationRef";
 
 const AuthContext = createContext();
 
+const normalizeProfile = (payload) => {
+  if (!payload) return null;
+  return payload.data ? payload.data : payload;
+};
+
 export const AuthProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
@@ -27,7 +32,7 @@ export const AuthProvider = ({ children }) => {
         const token = await AsyncStorage.getItem("accessToken");
         if (token) {
           const response = await authApi.getProfile();
-          setUser(response.data);
+          setUser(normalizeProfile(response.data));
           setIsLoggedIn(true);
         }
       } catch (error) {
@@ -49,7 +54,7 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem("accessToken", token);
       await AsyncStorage.setItem("refreshToken", token);
       const profileResponse = await authApi.getProfile();
-      setUser(profileResponse.data);
+      setUser(normalizeProfile(profileResponse.data));
       setIsLoggedIn(true);
       return response.data;
     } catch (error) {
@@ -87,8 +92,9 @@ export const AuthProvider = ({ children }) => {
       const token = await AsyncStorage.getItem("accessToken");
       if (token) {
         const response = await authApi.getProfile();
-        setUser(response.data);
-        return response.data;
+        const normalized = normalizeProfile(response.data);
+        setUser(normalized);
+        return normalized;
       }
     } catch (error) {
       console.error("Failed to refresh user:", error);

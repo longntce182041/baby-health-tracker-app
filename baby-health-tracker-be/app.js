@@ -53,7 +53,6 @@ app.use(cors({
     "http://localhost:3000",
     "http://localhost:5173",
     "exp://192.168.2.206:8081"
-
   ]
 }));
 app.use(express.json());
@@ -72,13 +71,26 @@ app.use(function (req, res, next) {
 
 // error handler
 app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get("env") === "development" ? err : {};
+  const statusCode = err.status || 500;
+  const payload = {
+    success: false,
+    message: err.message || "Internal Server Error",
+  };
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render("error");
+  if (req.app.get("env") === "development") {
+    payload.error = err;
+  }
+
+  res.status(statusCode);
+
+  const acceptHeader = req.headers.accept || "";
+  const prefersHtml = acceptHeader.includes("text/html");
+
+  if (req.originalUrl.startsWith("/api") || !prefersHtml) {
+    return res.json(payload);
+  }
+
+  return res.send(payload.message);
 });
 
 module.exports = app;
