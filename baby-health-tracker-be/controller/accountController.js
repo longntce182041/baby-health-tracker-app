@@ -73,7 +73,7 @@ const register = async (req, res) => {
       console.log("3 - Bắt đầu gửi mail qua Resend API...");
 
       await resend.emails.send({
-        from: "onboarding@resend.dev", // Email mặc định để test của Resend
+        from: "onboarding@betiny.online", // Email mặc định để test của Resend
         to: email, // Email của phụ huynh
         subject: "Your OTP Code",
         text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
