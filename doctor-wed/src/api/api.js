@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Thay đổi URL theo môi trường
-export const API_URL = "http://localhost:3000/api"; // Hoặc IP server thực tế
+export const API_URL = "https://baby-health-tracker-app.onrender.com/api"; // Hoặc IP server thực tế
 export const SOCKET_URL = API_URL.replace(/\/api$/, "");
 
 const api = axios.create({

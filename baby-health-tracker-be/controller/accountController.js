@@ -47,33 +47,33 @@ const register = async (req, res) => {
       used: false,
     });
     console.log("2");
-    // const transporter = nodemailer.createTransport({
-    //   service: "Gmail",
-    //   port: 465, // Bắt buộc dùng 465 hoặc 587
-    //   secure: true, // true cho 465, false cho 587
-    //   auth: {
-    //     user: config.EMAIL_USER,
-    //     pass: config.EMAIL_PASS,
-    //   },
-    // });
-    // console.log("3");
-    // try{
-    // await transporter.sendMail({
-    //   from: config.EMAIL_USER,
-    //   to: email,
-    //   subject: "Your OTP Code",
-    //   text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
-    // });
-    // console.log("4");
-    //   } catch (mailError) {
-    //   console.error("LỖI GỬI MAIL CHI TIẾT:", mailError);
-    //   throw mailError; // Ném lỗi ra ngoài để block catch tổng bắt được
-    // }
+    const transporter = nodemailer.createTransport({
+      service: "Gmail",
+      port: 465, // Bắt buộc dùng 465 hoặc 587
+      secure: true, // true cho 465, false cho 587
+      auth: {
+        user: config.EMAIL_USER,
+        pass: config.EMAIL_PASS,
+      },
+    });
+    console.log("3");
+    try {
+      await transporter.sendMail({
+        from: config.EMAIL_USER,
+        to: email,
+        subject: "Your OTP Code",
+        text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,
+      });
+      console.log("4");
+    } catch (mailError) {
+      console.error("LỖI GỬI MAIL CHI TIẾT:", mailError);
+      throw mailError; // Ném lỗi ra ngoài để block catch tổng bắt được
+    }
     try {
       console.log("3 - Bắt đầu gửi mail qua Resend API...");
 
       await resend.emails.send({
-        from: "onboarding@resend.dev", // Email mặc định để test của Resend
+        from: "betiny10092005@gmail.com", // Email mặc định để test của Resend
         to: email, // Email của phụ huynh
         subject: "Your OTP Code",
         text: `Your OTP code is ${otp}. It will expire in 10 minutes.`,

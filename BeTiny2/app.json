@@ -6,11 +6,32 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": { "image": "./assets/splash.png", "resizeMode": "contain", "backgroundColor": "#ffffff" },
-    "assetBundlePatterns": ["**/*"],
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.betiny.app" },
-    "android": { "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#ffffff" }, "package": "com.betiny.app" },
-    "extra": { "apiUrl": "http://localhost:3000/api" },
-    "scheme": "be-tiny"
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.betiny.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.betiny.app"
+    },
+    "extra": {
+      "apiUrl": "https://baby-health-tracker-app.onrender.com/api",
+      "eas": {
+        "projectId": "1708a706-e020-40dd-b095-cdcdfd19496f"
+      }
+    },
+    "scheme": "be-tiny",
+    "owner": "longnguyen465t"
   }
 }
