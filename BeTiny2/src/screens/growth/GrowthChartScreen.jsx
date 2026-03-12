@@ -100,9 +100,9 @@ const TIME_RANGES = [
   { key: "all", label: "All" },
 ];
 
-const STAT_PINK_BG = "#FFDDE2";
-const STAT_BLUE_BG = "#D6EFFF";
-const STAT_MINT_BG = "#B2E5E0";
+const STAT_PINK_BG = "#e2909c";
+const STAT_BLUE_BG = "#75abca";
+const STAT_MINT_BG = "#63d6cb";
 const MINT_GREEN = "#E6FFFA";
 const INSIGHT_GREEN = "#008566";
 const DAY_LABELS = ["Cn", "T2", "T3", "T4", "T5", "T6", "T7"];

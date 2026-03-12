@@ -1,6 +1,36 @@
 import api from "./api";
 import { MOCK_VACCINATIONS } from "../data/babyDetailMock";
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetryableError = (error) => {
+  const status = error?.response?.status;
+  return (
+    !status ||
+    status === 408 ||
+    status === 429 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  );
+};
+
+const requestWithRetry = async (requestFn, retries = 1, delayMs = 1200) => {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      lastError = error;
+      if (attempt === retries || !isRetryableError(error)) {
+        throw error;
+      }
+      await wait(delayMs);
+    }
+  }
+  throw lastError;
+};
+
 export const getVaccinations = async (babyId, params = {}) => {
   try {
     const res = await api.get(`/babies/${babyId}/vaccinations`, { params });
@@ -28,10 +58,35 @@ export const createVaccination = async (babyId, data) => {
 
 export const createVaccineSchedule = async (payload) => {
   try {
-    const res = await api.post("/vaccine-schedules", payload);
+    const res = await api.post("/vaccination-schedules", payload);
     return res.data;
   } catch (error) {
     console.warn("createVaccineSchedule error:", error?.message || error);
+    console.warn(
+      "createVaccineSchedule detail:",
+      error?.response?.status,
+      error?.response?.data,
+      payload,
+    );
+
+    const backendError = error?.response?.data?.error || "";
+    const legacyPopulateBug =
+      error?.response?.status === 500 &&
+      typeof backendError === "string" &&
+      backendError.includes("saved.populate(...).populate is not a function");
+
+    // Compatibility fallback: old backend version may save successfully but fail while populating response.
+    if (legacyPopulateBug) {
+      return {
+        message:
+          "Lịch đã được tạo nhưng server trả về lỗi populate. Vui lòng cập nhật backend.",
+        data: {
+          ...payload,
+          status: "scheduled",
+        },
+      };
+    }
+
     return (
       error.response?.data || {
         success: false,
@@ -41,12 +96,20 @@ export const createVaccineSchedule = async (payload) => {
   }
 };
 
-export const getVaccines = () => {
-  return api.get("/vaccinations");
+export const getVaccines = async () => {
+  return requestWithRetry(
+    () => api.get("/vaccinations", { timeout: 20000 }),
+    2,
+    1400,
+  );
 };
 
-export const getVaccineLocations = (vaccineId) => {
-  return api.get(`/vaccinations/${vaccineId}/locations`);
+export const getVaccineLocations = async (vaccineId) => {
+  return requestWithRetry(
+    () => api.get(`/vaccinations/${vaccineId}/locations`, { timeout: 20000 }),
+    2,
+    1400,
+  );
 };
 
 export const bookVaccinationAppointment = (data) => {
@@ -55,7 +118,12 @@ export const bookVaccinationAppointment = (data) => {
 
 export const getVaccinationSchedules = async (babyId) => {
   try {
-    const res = await api.get(`/vaccination-schedules?baby_id=${babyId}`);
+    const res = await requestWithRetry(
+      () =>
+        api.get(`/vaccination-schedules?baby_id=${babyId}`, { timeout: 20000 }),
+      1,
+      1000,
+    );
     // Map backend fields to frontend expectations
     if (res?.data?.data) {
       res.data.data = res.data.data.map((schedule) => ({

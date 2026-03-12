@@ -45,6 +45,28 @@ function getDayName(dateStr) {
   return days[d.getDay()];
 }
 
+function formatExperience(value) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+
+  if (Array.isArray(value) && value.length > 0) {
+    const names = value
+      .map((item) =>
+        typeof item === "string"
+          ? item.trim()
+          : item?.certificate_name?.trim() || "",
+      )
+      .filter(Boolean);
+
+    if (names.length > 0) {
+      return names.join("\n• ").replace(/^/, "• ");
+    }
+  }
+
+  return "Chưa cập nhật";
+}
+
 export default function DoctorDetailScreen({ route, navigation }) {
   const { id, doctor: doctorParam } = route.params || {};
   const insets = useSafeAreaInsets();
@@ -72,13 +94,34 @@ export default function DoctorDetailScreen({ route, navigation }) {
         console.log("DoctorDetailScreen getDoctorById response:", docRes);
         console.log("DoctorDetailScreen getDoctorSchedules response:", schRes);
 
-        const doc =
-          docRes?.success && docRes?.data ? docRes.data : doctorParam || null;
+        const rawDoc = docRes?.data || doctorParam || null;
+
+        const doc = rawDoc
+          ? {
+              ...(rawDoc?.doctor || rawDoc),
+              consultation_fee:
+                rawDoc?.consultation_fee ??
+                rawDoc?.doctor?.consultation_fee ??
+                rawDoc?.doctor_fee ??
+                rawDoc?.doctor?.doctor_fee,
+              rating:
+                rawDoc?.rating ??
+                rawDoc?.avg_rating ??
+                rawDoc?.doctor?.rating ??
+                rawDoc?.doctor?.avg_rating,
+              experience:
+                rawDoc?.experience ??
+                rawDoc?.doctor?.experience ??
+                rawDoc?.doctor_experience,
+            }
+          : null;
 
         console.log("DoctorDetailScreen doctor data:", {
           hasDoc: !!doc,
           fullName: doc?.full_name,
           consultationFee: doc?.consultation_fee,
+          rating: doc?.rating,
+          experience: doc?.experience,
           specialty: doc?.specialty,
         });
 
@@ -129,10 +172,7 @@ export default function DoctorDetailScreen({ route, navigation }) {
     );
   }
 
-  const experienceText =
-    typeof doctor.experience === "string" && doctor.experience.trim()
-      ? doctor.experience.trim()
-      : "Chưa cập nhật";
+  const experienceText = formatExperience(doctor.experience);
   const ratingValue = doctor.rating ?? doctor.avg_rating;
   const ratingDisplay =
     ratingValue != null && ratingValue !== "" ? ratingValue : "Chưa cập nhật";
@@ -150,19 +190,19 @@ export default function DoctorDetailScreen({ route, navigation }) {
   const hasSchedules = Array.isArray(schedules) && schedules.length > 0;
   const scheduleList = hasSchedules
     ? schedules.slice(0, 7).map((s) => {
-      const scheduleDate = s.date || s.available_date;
-      const timeSlot =
-        s.time_slot ||
-        (s.slots && s.slots.length > 0
-          ? s.slots
-            .map((slot) => `${slot.start_time}-${slot.end_time}`)
-            .join(", ")
-          : "—");
-      return {
-        day: getDayName(scheduleDate),
-        time: timeSlot,
-      };
-    })
+        const scheduleDate = s.date || s.available_date;
+        const timeSlot =
+          s.time_slot ||
+          (s.slots && s.slots.length > 0
+            ? s.slots
+                .map((slot) => `${slot.start_time}-${slot.end_time}`)
+                .join(", ")
+            : "—");
+        return {
+          day: getDayName(scheduleDate),
+          time: timeSlot,
+        };
+      })
     : [{ day: "—", time: "Chưa có lịch" }];
   const canBook = hasFee && hasSchedules;
 

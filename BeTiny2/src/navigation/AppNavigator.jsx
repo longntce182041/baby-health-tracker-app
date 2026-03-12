@@ -16,6 +16,7 @@ import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
 import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
 import ProfileScreen from "../screens/account/ProfileScreen";
 import ProfileEditScreen from "../screens/account/ProfileEditScreen";
+import ChangePasswordScreen from "../screens/account/ChangePasswordScreen";
 import BabyListScreen from "../screens/baby/BabyListScreen";
 import GrowthChartScreen from "../screens/growth/GrowthChartScreen";
 import BabyDetailScreen from "../screens/baby/BabyDetailScreen";
@@ -235,6 +236,11 @@ export default function AppNavigator() {
           name="ProfileEdit"
           component={ProfileEditScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="ChangePassword"
+          component={ChangePasswordScreen}
+          options={{ title: "Đổi mật khẩu", headerShown: false }}
         />
         <Stack.Screen
           name="PackageList"

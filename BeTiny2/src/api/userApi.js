@@ -30,6 +30,32 @@ export const updateProfile = async (data) => {
 };
 
 export const getTransactions = async (params = {}) => {
-  const res = await api.get("/users/transactions", { params });
-  return res.data;
+  try {
+    const res = await api.get("/transactions/me", { params });
+    return res.data;
+  } catch (error) {
+    if (error?.response?.status === 404) {
+      const fallbackRes = await api.get("/payments/history", { params });
+      return fallbackRes.data;
+    }
+    throw error;
+  }
+};
+
+export const changePassword = async (current_password, new_password) => {
+  try {
+    const res = await api.put("/profile/password", {
+      current_password,
+      new_password,
+    });
+    return res.data;
+  } catch (error) {
+    console.warn("changePassword error:", error?.message || error);
+    return (
+      error.response?.data || {
+        success: false,
+        message: error?.message || "Không thể thay đổi mật khẩu",
+      }
+    );
+  }
 };

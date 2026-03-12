@@ -121,7 +121,7 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.logoSection}>
           <View style={styles.logoWrapper}>
             <Image
-              source={require("../../../assets/images/logoBeTiny.bmp")}
+              source={require("../../../assets/images/logoBeTiny.png")}
               style={styles.logo}
               resizeMode="cover"
             />

@@ -44,6 +44,8 @@ function getAgeString(dateOfBirth) {
   return `${years} tuổi ${monthsLeft} tháng`;
 }
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const avatarSizes = { sm: 32, sm2: 38, xs: 28, md: 44 };
 
 function AvatarCircle({ initial, color = colors.pinkLight, size = "md" }) {
@@ -171,7 +173,20 @@ export default function HomeScreen({ navigation }) {
       return;
     }
     try {
-      const res = await getBabies();
+      let res;
+      try {
+        res = await getBabies();
+      } catch (firstErr) {
+        const status = firstErr?.response?.status;
+        // Render can return transient 502 during cold start/redeploy.
+        if (status === 502) {
+          await wait(1200);
+          res = await getBabies();
+        } else {
+          throw firstErr;
+        }
+      }
+
       const list = Array.isArray(res?.data?.data) ? res.data.data : [];
       setBabies(list);
 
@@ -187,6 +202,8 @@ export default function HomeScreen({ navigation }) {
       }
     } catch (err) {
       console.error("Home getBabies:", err);
+      console.error("Home getBabies status:", err?.response?.status);
+      console.error("Home getBabies body:", err?.response?.data);
       setBabies([]);
       setSelectedBaby(null);
     } finally {

@@ -125,7 +125,7 @@ export default function VerifyOTP({ route, navigation }) {
       <View style={styles.content}>
         <View style={styles.logoWrap}>
           <Image
-            source={require("../../../assets/images/logoBeTiny.bmp")}
+            source={require("../../../assets/images/logoBeTiny.png")}
             style={styles.logo}
             resizeMode="contain"
           />

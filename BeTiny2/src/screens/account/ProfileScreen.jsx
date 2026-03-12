@@ -107,6 +107,7 @@ export default function ProfileScreen({ navigation }) {
 
   const goHome = () => navigation.navigate("Main", { screen: "HomeTab" });
   const goToProfileEdit = () => navigation.navigate("ProfileEdit");
+  const goToChangePassword = () => navigation.navigate("ChangePassword");
 
   const handleLogout = async () => {
     if (logout) {
@@ -213,6 +214,25 @@ export default function ProfileScreen({ navigation }) {
       >
         <Text style={styles.sectionLabel}>QUẢN LÝ TÀI KHOẢN</Text>
         <View style={styles.settingsGroup}>
+          <TouchableOpacity
+            style={styles.settingsItem}
+            onPress={goToChangePassword}
+            activeOpacity={0.7}
+          >
+            <View style={styles.itemIcon}>
+              <Ionicons
+                name="key-outline"
+                size={22}
+                color={colors.blueAccent}
+              />
+            </View>
+            <Text style={styles.itemLabel}>Thay đổi mật khẩu</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textMuted}
+            />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.settingsItem_1}
             onPress={goToProfileEdit}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  KeyboardAvoidingView,
   Platform,
   StatusBar,
   Image,
@@ -17,7 +18,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { addBaby, updateBaby } from "../../api/babyApi";
+import { uploadImage } from "../../api/uploadApi";
 import { colors, typography } from "../../theme";
 
 const { fontFamily } = typography;
@@ -127,6 +130,7 @@ function parseDobFromParts(dayStr, monthStr, yearStr) {
 
 export default function BabyFormScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef(null);
   const { id, baby } = route.params || {};
   const isEdit = !!id;
   const [form, setForm] = useState({
@@ -140,6 +144,9 @@ export default function BabyFormScreen({ route, navigation }) {
   const [allergies, setAllergies] = useState([]);
   const [newAllergy, setNewAllergy] = useState("");
   const [loading, setLoading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarPreviewUri, setAvatarPreviewUri] = useState("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [errors, setErrors] = useState({
     full_name: "",
     dobInput: "",
@@ -155,6 +162,21 @@ export default function BabyFormScreen({ route, navigation }) {
     const m = base.getMonth() + 1;
     return `${y}-${String(m).padStart(2, "0")}`;
   });
+
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== "web") {
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Quyền truy cập",
+            "Cần quyền truy cập thư viện ảnh để tải ảnh đại diện",
+          );
+        }
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (isEdit && baby) {
@@ -176,8 +198,51 @@ export default function BabyFormScreen({ route, navigation }) {
         note: noteText,
       });
       setAllergies(baby.allergies || baby.alergy || []);
+      setAvatarUrl(baby.avatar_url || baby.avt || baby.avatar || "");
     }
   }, [isEdit, baby]);
+
+  const handlePickAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: false,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      setAvatarPreviewUri(asset.uri);
+      setUploadingAvatar(true);
+
+      const uriParts = asset.uri.split(".");
+      const fileType = uriParts[uriParts.length - 1] || "jpg";
+      const formData = new FormData();
+      formData.append("image", {
+        uri:
+          Platform.OS === "ios" ? asset.uri.replace("file://", "") : asset.uri,
+        type: `image/${fileType}`,
+        name: `baby_avatar_${Date.now()}.${fileType}`,
+      });
+
+      const response = await uploadImage(formData);
+      const uploadedUrl = response?.data?.url;
+      if (!uploadedUrl) {
+        throw new Error("Upload failed: no url returned");
+      }
+
+      setAvatarUrl(uploadedUrl);
+      setAvatarPreviewUri("");
+    } catch (error) {
+      console.error("Upload avatar error:", error);
+      Alert.alert("Lỗi", "Không thể tải ảnh đại diện lên. Vui lòng thử lại.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleAddAllergy = () => {
     if (newAllergy.trim() && !allergies.includes(newAllergy.trim())) {
@@ -249,7 +314,8 @@ export default function BabyFormScreen({ route, navigation }) {
     setDobPickerVisible(false);
   };
 
-  const avatarSource = baby?.avt ?? baby?.avatar;
+  const avatarSource =
+    avatarPreviewUri || avatarUrl || baby?.avt || baby?.avatar;
 
   const isProfileFormValid = (() => {
     const nameResult = validateName(form.full_name);
@@ -281,6 +347,7 @@ export default function BabyFormScreen({ route, navigation }) {
     try {
       const payload = {
         full_name: nameResult.cleaned,
+        avatar_url: avatarUrl || null,
         day_of_birth: dobResult.iso, // Backend expects day_of_birth
         gender: form.gender || null,
         alergy: allergies.length > 0 ? allergies : null, // Backend uses "alergy" not "allergies"
@@ -315,8 +382,17 @@ export default function BabyFormScreen({ route, navigation }) {
     setLoading(false);
   };
 
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+  };
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       {Platform.OS === "android" && (
         <StatusBar
           backgroundColor={isEdit ? "#F4ABB4" : colors.pinkAccent}
@@ -346,8 +422,12 @@ export default function BabyFormScreen({ route, navigation }) {
       </LinearGradient>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingBottom: 100 }]}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="always"
+        keyboardDismissMode="on-drag"
+        scrollEnabled
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.avatarSection}>
@@ -368,8 +448,14 @@ export default function BabyFormScreen({ route, navigation }) {
               </Text>
             )}
           </View>
-          <TouchableOpacity>
-            <Text style={styles.avatarLabel}>Thay đổi ảnh đại diện</Text>
+          <TouchableOpacity
+            onPress={handlePickAvatar}
+            disabled={uploadingAvatar}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.avatarLabel}>
+              {uploadingAvatar ? "Đang tải ảnh..." : "Thay đổi ảnh đại diện"}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -570,6 +656,7 @@ export default function BabyFormScreen({ route, navigation }) {
               style={[styles.input, styles.allergyInput]}
               value={newAllergy}
               onChangeText={setNewAllergy}
+              onFocus={scrollToBottom}
               placeholder="VD: Sữa bò, hải sản..."
               placeholderTextColor={colors.textMuted}
               onSubmitEditing={handleAddAllergy}
@@ -608,6 +695,7 @@ export default function BabyFormScreen({ route, navigation }) {
             style={[styles.input, styles.noteInput]}
             value={form.note}
             onChangeText={(v) => setForm((f) => ({ ...f, note: v }))}
+            onFocus={scrollToBottom}
             placeholder="VD: Thông tin bổ sung về bé..."
             placeholderTextColor={colors.textMuted}
             multiline
@@ -615,36 +703,37 @@ export default function BabyFormScreen({ route, navigation }) {
             textAlignVertical="top"
           />
         </View>
-      </ScrollView>
 
-      <View
-        style={[styles.actionsFixed, { paddingBottom: insets.bottom + 16 }]}
-      >
-        <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            (loading || !isProfileFormValid) && styles.submitBtnDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={loading || !isProfileFormValid}
+        <View
+          style={[styles.actionsFixed, { paddingBottom: insets.bottom + 16 }]}
         >
-          {loading ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <Text style={styles.submitBtnText}>
-              {isEdit ? "Cập nhật hồ sơ" : "Lưu hồ sơ bé"}
-            </Text>
-          )}
-        </TouchableOpacity>
-        {!isEdit && (
           <TouchableOpacity
-            style={styles.skipBtn}
-            onPress={() => navigation.goBack()}
+            style={[
+              styles.submitBtn,
+              (loading || uploadingAvatar || !isProfileFormValid) &&
+                styles.submitBtnDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={loading || uploadingAvatar || !isProfileFormValid}
           >
-            <Text style={styles.skipBtnText}>Bỏ qua, thêm sau</Text>
+            {loading ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={styles.submitBtnText}>
+                {isEdit ? "Cập nhật hồ sơ" : "Lưu hồ sơ bé"}
+              </Text>
+            )}
           </TouchableOpacity>
-        )}
-      </View>
+          {!isEdit && (
+            <TouchableOpacity
+              style={styles.skipBtn}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.skipBtnText}>Bỏ qua, thêm sau</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
 
       <Modal visible={dobPickerVisible} transparent animationType="fade">
         <Pressable
@@ -798,7 +887,7 @@ export default function BabyFormScreen({ route, navigation }) {
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -832,7 +921,7 @@ const styles = StyleSheet.create({
   },
 
   scrollView: { flex: 1, marginTop: -40 },
-  content: { paddingHorizontal: 16, paddingTop: 0 },
+  content: { paddingHorizontal: 16, paddingTop: 0, paddingBottom: 220 },
 
   avatarSection: { alignItems: "center", marginBottom: 28 },
   avatarWrap: {
@@ -1135,10 +1224,7 @@ const styles = StyleSheet.create({
   },
 
   actionsFixed: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
+    marginTop: 8,
     paddingHorizontal: 16,
     paddingTop: 16,
     backgroundColor: colors.background,

@@ -231,40 +231,12 @@ export default function ProfileEditScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        <View style={styles.walletCard}>
-          <View style={styles.walletLeft}>
-            <View style={styles.walletIconWrap}>
-              <Ionicons
-                name="wallet-outline"
-                size={24}
-                color={colors.pinkAccent}
-              />
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.napBtn}
-            activeOpacity={0.8}
-            onPress={() => navigation.navigate("TopUpPoints")}
-          >
-            <Ionicons name="add" size={20} color={colors.white} />
-            <Text style={styles.napBtnText}>Nạp</Text>
-          </TouchableOpacity>
-        </View>
-
         <TouchableOpacity
           style={styles.card}
           onPress={() => navigation.navigate("Transaction")}
           activeOpacity={0.8}
         >
           <Text style={styles.cardTitle}>Lịch sử giao dịch</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("PackageList")}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.cardTitle}>Gói dịch vụ của tôi</Text>
           <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
       </ScrollView>
