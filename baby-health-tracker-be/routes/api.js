@@ -233,6 +233,12 @@ router.patch(
   requireParent,
   userController.updateWalletPoints,
 );
+router.get(
+  "/transactions/me",
+  authenticateToken,
+  requireParent,
+  userController.ViewTransactionHistory,
+);
 router.put("/profile", authenticateToken, userController.updateProfile);
 router.put(
   "/profile/password",

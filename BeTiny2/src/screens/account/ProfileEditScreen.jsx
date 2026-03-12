@@ -240,12 +240,6 @@ export default function ProfileEditScreen({ navigation }) {
                 color={colors.pinkAccent}
               />
             </View>
-            <View>
-              <Text style={styles.walletLabel}>Điểm ví</Text>
-              <Text style={styles.walletPoints}>
-                {profile.wallet_points} điểm
-              </Text>
-            </View>
           </View>
           <TouchableOpacity
             style={styles.napBtn}

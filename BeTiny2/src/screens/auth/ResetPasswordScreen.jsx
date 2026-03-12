@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,8 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../context/AuthContext";
-import { login as loginService } from "../../api/authApi";
+import { resetPassword } from "../../api/authApi";
 import { colors, typography } from "../../theme";
 
 const { fontFamily } = typography;
@@ -37,69 +36,79 @@ const inputShadow = {
   elevation: 2,
 };
 
-export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function ResetPasswordScreen({ navigation, route }) {
+  const initialEmail = route?.params?.email || "";
+  const [email, setEmail] = useState(initialEmail);
+  const [otp, setOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [touched, setTouched] = useState({ email: false, password: false });
-  const [focused, setFocused] = useState({ email: false, password: false });
-  const { setAuthUser } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [touched, setTouched] = useState({
+    email: false,
+    otp: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
+  const [focused, setFocused] = useState({
+    email: false,
+    otp: false,
+    newPassword: false,
+    confirmPassword: false,
+  });
 
-  const isFormValid = Boolean(email.trim() && isValidEmail(email) && password);
-  const showErrorEmail =
-    touched.email && (!email.trim() || !isValidEmail(email));
-  const showErrorPassword = touched.password && !password;
+  const otpSanitized = useMemo(() => otp.replace(/[^0-9]/g, ""), [otp]);
+
+  const emailError = touched.email && (!email.trim() || !isValidEmail(email));
+  const otpError = touched.otp && otpSanitized.length !== 5;
+  const passwordError = touched.newPassword && newPassword.length < 6;
+  const confirmError =
+    touched.confirmPassword &&
+    (!confirmPassword || confirmPassword !== newPassword);
+
+  const isFormValid =
+    isValidEmail(email.trim()) &&
+    otpSanitized.length === 5 &&
+    newPassword.length >= 6 &&
+    confirmPassword === newPassword;
 
   const handleSubmit = async () => {
-    if (!email.trim()) {
-      Alert.alert("Lỗi", "Vui lòng nhập email");
-      return;
-    }
-    if (!isValidEmail(email.trim())) {
+    const trimmedEmail = email.trim();
+
+    if (!isValidEmail(trimmedEmail)) {
       Alert.alert("Lỗi", "Email không đúng định dạng");
       return;
     }
-    if (!password) {
-      Alert.alert("Lỗi", "Vui lòng nhập mật khẩu");
+    if (otpSanitized.length !== 5) {
+      Alert.alert("Lỗi", "OTP phải gồm đúng 5 chữ số");
       return;
     }
+    if (newPassword.length < 6) {
+      Alert.alert("Lỗi", "Mật khẩu mới phải có ít nhất 6 ký tự");
+      return;
+    }
+    if (confirmPassword !== newPassword) {
+      Alert.alert("Lỗi", "Xác nhận mật khẩu không khớp");
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await loginService({ email: email.trim(), password });
-      console.log("Login response:", res);
-      console.log("token:", res?.data?.token);
-      console.log("Account info:", {
-        account_id: res?.data?.account_id,
-        parent_id: res?.data?.parent_id,
-        role: res?.data?.role,
-      });
-
-      if (res?.data?.token) {
-        const userData = {
-          account_id: res.data.account_id,
-          parent_id: res.data.parent_id,
-          role: res.data.role,
-          email: email.trim(),
-        };
-        setAuthUser(userData);
-        // Navigate trước để không bị block bởi alert
-        navigation.reset({ index: 0, routes: [{ name: "Main" }] });
-        // Show alert sau khi navigate
-        setTimeout(() => {
-          Alert.alert("Thành công", res.message || "Đăng nhập thành công");
-        }, 500);
-      } else {
-        setLoading(false);
-        Alert.alert("Lỗi", res?.message || "Đăng nhập thất bại");
-      }
+      const res = await resetPassword(trimmedEmail, otpSanitized, newPassword);
+      setLoading(false);
+      Alert.alert(
+        "Thành công",
+        res?.message || "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.",
+      );
+      navigation.navigate("Login");
     } catch (error) {
       setLoading(false);
-      console.log("Login error:", error);
       Alert.alert(
         "Lỗi",
         error?.message ||
           error?.response?.data?.message ||
-          "Đăng nhập thất bại",
+          "Đặt lại mật khẩu thất bại",
       );
     }
   };
@@ -118,6 +127,7 @@ export default function LoginScreen({ navigation }) {
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
+
         <View style={styles.logoSection}>
           <View style={styles.logoWrapper}>
             <Image
@@ -126,8 +136,8 @@ export default function LoginScreen({ navigation }) {
               resizeMode="cover"
             />
           </View>
-          <Text style={styles.formTitle}>Đăng nhập</Text>
-          <Text style={styles.subtitle}>Chào mừng trở lại</Text>
+          <Text style={styles.formTitle}>Đặt lại mật khẩu</Text>
+          <Text style={styles.subtitle}>Nhập email, OTP và mật khẩu mới</Text>
         </View>
       </View>
 
@@ -138,7 +148,7 @@ export default function LoginScreen({ navigation }) {
             style={[
               styles.inputBox,
               focused.email && styles.inputFocused,
-              showErrorEmail && styles.inputError,
+              emailError && styles.inputError,
             ]}
           >
             <TextInput
@@ -153,9 +163,10 @@ export default function LoginScreen({ navigation }) {
                 setTouched((t) => ({ ...t, email: true }));
               }}
               keyboardType="email-address"
+              autoCapitalize="none"
             />
           </View>
-          {showErrorEmail && (
+          {emailError && (
             <Text style={styles.errorText}>
               {!email.trim()
                 ? "Vui lòng nhập email"
@@ -165,39 +176,112 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.fieldWrap}>
-          <Text style={styles.labelOnBorder}>Mật khẩu</Text>
+          <Text style={styles.labelOnBorder}>Mã OTP</Text>
           <View
             style={[
               styles.inputBox,
-              focused.password && styles.inputFocused,
-              showErrorPassword && styles.inputError,
+              focused.otp && styles.inputFocused,
+              otpError && styles.inputError,
             ]}
           >
             <TextInput
               style={styles.inputInnerSmall}
-              placeholder="Nhập mật khẩu"
+              placeholder="Nhập OTP 5 số"
               placeholderTextColor="#c5c5c5"
-              value={password}
-              onChangeText={setPassword}
-              onFocus={() => setFocused((f) => ({ ...f, password: true }))}
+              value={otpSanitized}
+              onChangeText={(v) => setOtp(v.replace(/[^0-9]/g, ""))}
+              onFocus={() => setFocused((f) => ({ ...f, otp: true }))}
               onBlur={() => {
-                setFocused((f) => ({ ...f, password: false }));
-                setTouched((t) => ({ ...t, password: true }));
+                setFocused((f) => ({ ...f, otp: false }));
+                setTouched((t) => ({ ...t, otp: true }));
               }}
-              secureTextEntry
+              keyboardType="number-pad"
+              maxLength={5}
             />
           </View>
-          {showErrorPassword && (
-            <Text style={styles.errorText}>Vui lòng nhập mật khẩu</Text>
+          {otpError && (
+            <Text style={styles.errorText}>OTP phải gồm đúng 5 chữ số</Text>
           )}
+        </View>
 
-          <TouchableOpacity
-            style={styles.forgotWrap}
-            onPress={() => navigation.navigate("ForgotPassword")}
-            activeOpacity={0.8}
+        <View style={styles.fieldWrap}>
+          <Text style={styles.labelOnBorder}>Mật khẩu mới</Text>
+          <View
+            style={[
+              styles.inputBox,
+              styles.passwordBox,
+              focused.newPassword && styles.inputFocused,
+              passwordError && styles.inputError,
+            ]}
           >
-            <Text style={styles.forgotText}>Quên mật khẩu?</Text>
-          </TouchableOpacity>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Nhập mật khẩu mới"
+              placeholderTextColor="#c5c5c5"
+              value={newPassword}
+              onChangeText={setNewPassword}
+              onFocus={() => setFocused((f) => ({ ...f, newPassword: true }))}
+              onBlur={() => {
+                setFocused((f) => ({ ...f, newPassword: false }));
+                setTouched((t) => ({ ...t, newPassword: true }));
+              }}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off" : "eye"}
+                size={20}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+          {passwordError && (
+            <Text style={styles.errorText}>Mật khẩu mới tối thiểu 6 ký tự</Text>
+          )}
+        </View>
+
+        <View style={styles.fieldWrap}>
+          <Text style={styles.labelOnBorder}>Xác nhận mật khẩu</Text>
+          <View
+            style={[
+              styles.inputBox,
+              styles.passwordBox,
+              focused.confirmPassword && styles.inputFocused,
+              confirmError && styles.inputError,
+            ]}
+          >
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Nhập lại mật khẩu mới"
+              placeholderTextColor="#c5c5c5"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              onFocus={() =>
+                setFocused((f) => ({ ...f, confirmPassword: true }))
+              }
+              onBlur={() => {
+                setFocused((f) => ({ ...f, confirmPassword: false }));
+                setTouched((t) => ({ ...t, confirmPassword: true }));
+              }}
+              secureTextEntry={!showConfirmPassword}
+            />
+            <TouchableOpacity
+              onPress={() => setShowConfirmPassword((v) => !v)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name={showConfirmPassword ? "eye-off" : "eye"}
+                size={20}
+                color={colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+          {confirmError && (
+            <Text style={styles.errorText}>Xác nhận mật khẩu không khớp</Text>
+          )}
         </View>
 
         <TouchableOpacity
@@ -209,23 +293,9 @@ export default function LoginScreen({ navigation }) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.btnText}>Đăng nhập</Text>
+            <Text style={styles.btnText}>Đổi mật khẩu</Text>
           )}
         </TouchableOpacity>
-
-        <Text style={styles.or}>hoặc</Text>
-
-        <TouchableOpacity style={styles.googleBtn} activeOpacity={0.8}>
-          <Text style={styles.googleIcon}>G</Text>
-          <Text style={styles.googleText}>Đăng nhập bằng Google</Text>
-        </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Chưa có tài khoản? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-            <Text style={styles.footerLink}>Đăng ký</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </ScrollView>
   );
@@ -283,7 +353,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 30,
     paddingBottom: 32,
-    minHeight: 400,
+    minHeight: 420,
     overflow: "visible",
     marginTop: 8,
   },
@@ -307,19 +377,6 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 20,
   },
-  inputBoxSmall: {
-    ...inputShadow,
-    paddingTop: 6,
-    paddingBottom: 6,
-    paddingHorizontal: 20,
-  },
-  inputInner: {
-    ...typography.P,
-    fontFamily,
-    color: colors.text,
-    paddingVertical: 8,
-    paddingHorizontal: 0,
-  },
   inputInnerSmall: {
     fontSize: 15,
     fontWeight: "400",
@@ -327,6 +384,21 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingVertical: 0,
     paddingHorizontal: 0,
+  },
+  passwordBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "400",
+    fontFamily,
+    color: colors.text,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    marginRight: 10,
   },
   inputFocused: {
     borderWidth: 2.3,
@@ -346,33 +418,6 @@ const styles = StyleSheet.create({
     color: "#E57373",
     marginTop: 6,
     marginLeft: 4,
-  },
-  forgotWrap: {
-    marginTop: 10,
-    alignSelf: "flex-end",
-  },
-  forgotText: {
-    ...typography.PMedium,
-    fontFamily,
-    color: colors.pinkAccent,
-    fontWeight: "600",
-    textDecorationLine: "underline",
-  },
-  testHintBtn: {
-    marginTop: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.pinkLight,
-    borderStyle: "dashed",
-  },
-  testHintText: {
-    ...typography.PSmall,
-    fontFamily,
-    color: colors.textMuted,
-    textAlign: "center",
   },
   btn: {
     width: "100%",
@@ -398,44 +443,5 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: "700",
     fontSize: 17,
-  },
-  or: {
-    ...typography.PSmall,
-    fontFamily,
-    color: colors.textMuted,
-    textAlign: "center",
-    marginTop: 20,
-    marginBottom: 12,
-  },
-  googleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.white,
-    borderRadius: 14,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  googleIcon: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#4285F4",
-    marginRight: 10,
-  },
-  googleText: { ...typography.P, fontFamily, color: colors.text },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 24,
-  },
-  footerText: { ...typography.PSmall, fontFamily, color: colors.textMuted },
-  footerLink: {
-    ...typography.PSmall,
-    fontFamily,
-    color: colors.pinkAccent,
-    fontWeight: "600",
-    textDecorationLine: "underline",
   },
 });

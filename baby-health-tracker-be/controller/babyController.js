@@ -1,4 +1,31 @@
 const babyService = require("../services/babyService");
+const cloudinary = require("../configs/CloudinaryConfig");
+
+const getCloudinaryPublicIdFromUrl = (rawUrl) => {
+  if (!rawUrl || typeof rawUrl !== "string") {
+    return null;
+  }
+
+  try {
+    const parsedUrl = new URL(rawUrl);
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+
+    if (cloudName && !parsedUrl.pathname.includes(`/${cloudName}/`)) {
+      return null;
+    }
+
+    const match = parsedUrl.pathname.match(
+      /\/upload\/(?:v\d+\/)?(.+)\.[a-zA-Z0-9]+$/,
+    );
+    if (!match || !match[1]) {
+      return null;
+    }
+
+    return decodeURIComponent(match[1]);
+  } catch (_error) {
+    return null;
+  }
+};
 
 const normalizeNoteInput = (note) => {
   if (note === undefined) {
@@ -95,6 +122,12 @@ const updateBaby = async (req, res) => {
     req.body;
 
   try {
+    const existingBaby = await babyService.findBabyById(id);
+    if (!existingBaby) {
+      return res.status(404).json({ message: "Baby not found" });
+    }
+
+    const previousAvatarUrl = existingBaby.avatar_url || null;
     const updateData = {};
     if (full_name !== undefined) updateData.full_name = full_name;
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
@@ -125,6 +158,18 @@ const updateBaby = async (req, res) => {
     const updated = await babyService.updateBabyById(id, updateData);
     if (!updated) {
       return res.status(404).json({ message: "Baby not found" });
+    }
+
+    // If avatar was changed or cleared, clean up old image from Cloudinary.
+    if (avatar_url !== undefined && previousAvatarUrl !== avatar_url) {
+      const previousPublicId = getCloudinaryPublicIdFromUrl(previousAvatarUrl);
+      if (previousPublicId) {
+        try {
+          await cloudinary.uploader.destroy(previousPublicId);
+        } catch (cleanupError) {
+          console.error("Failed to cleanup old baby avatar:", cleanupError);
+        }
+      }
     }
 
     res

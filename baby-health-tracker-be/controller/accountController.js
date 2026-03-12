@@ -200,7 +200,7 @@ const forgotPassword = async (req, res) => {
 
     try {
       await resend.emails.send({
-        from: "onboarding@resend.dev",
+        from: "onboarding@betiny.online", // Email mặc định để test của Resend
         to: email,
         subject: "Reset Password OTP",
         text: `Your OTP code is ${otp}. It will expire in ${OTP_EXPIRY_MINUTES} minutes.`,

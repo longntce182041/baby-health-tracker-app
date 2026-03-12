@@ -12,6 +12,8 @@ import HomeScreen from "../screens/home/HomeScreen";
 import WelcomeScreen from "../screens/auth/WelcomeScreen";
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
+import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
+import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
 import ProfileScreen from "../screens/account/ProfileScreen";
 import ProfileEditScreen from "../screens/account/ProfileEditScreen";
 import BabyListScreen from "../screens/baby/BabyListScreen";
@@ -133,6 +135,16 @@ export default function AppNavigator() {
           name="Register"
           component={RegisterScreen}
           options={{ title: "Đăng ký", headerShown: false }}
+        />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPasswordScreen}
+          options={{ title: "Quên mật khẩu", headerShown: false }}
+        />
+        <Stack.Screen
+          name="ResetPassword"
+          component={ResetPasswordScreen}
+          options={{ title: "Đặt lại mật khẩu", headerShown: false }}
         />
         <Stack.Screen
           name="BabyDetail"

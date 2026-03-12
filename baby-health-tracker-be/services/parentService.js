@@ -1,50 +1,59 @@
-const Parent = require('../models/parents');
+const Parent = require("../models/parents");
+const TransactionHistory = require("../models/transaction_history");
 
 const createParent = async (parentData) => {
-    const parent = new Parent(parentData);
-    return await parent.save();
+  const parent = new Parent(parentData);
+  return await parent.save();
 };
 const findParentById = async (id) => {
-    return await Parent.findById(id);
+  return await Parent.findById(id);
 };
 
 const updateParentById = async (parentId, updateData) => {
-    return await Parent.findByIdAndUpdate(parentId, updateData, { new: true });
+  return await Parent.findByIdAndUpdate(parentId, updateData, { new: true });
 };
 
 const listParentsByIds = async (parentIds) => {
-    return await Parent.find({ _id: { $in: parentIds } });
+  return await Parent.find({ _id: { $in: parentIds } });
 };
 
 const deleteParent = async (parentId) => {
-    return await Parent.findByIdAndDelete(parentId);
+  return await Parent.findByIdAndDelete(parentId);
 };
 
 const addWalletPoints = async (parentId, points) => {
-    return await Parent.findByIdAndUpdate(
-        parentId,
-        { $inc: { wallet_points: points } },
-        { new: true }
-    );
+  return await Parent.findByIdAndUpdate(
+    parentId,
+    { $inc: { wallet_points: points } },
+    { new: true },
+  );
 };
 
 const deductWalletPoints = async (parentId, points) => {
-    return await Parent.findOneAndUpdate(
-        {
-            _id: parentId,
-            wallet_points: { $gte: points },
-        },
-        { $inc: { wallet_points: -points } },
-        { new: true }
-    );
+  return await Parent.findOneAndUpdate(
+    {
+      _id: parentId,
+      wallet_points: { $gte: points },
+    },
+    { $inc: { wallet_points: -points } },
+    { new: true },
+  );
+};
+
+const viewTransactionHistory = async (parentId) => {
+  return await TransactionHistory.find({ parent_id: parentId }).sort({
+    transaction_date: -1,
+    created_at: -1,
+  });
 };
 
 module.exports = {
-    createParent,
-    findParentById,
-    updateParentById,
-    listParentsByIds,
-    deleteParent,
-    addWalletPoints,
-    deductWalletPoints,
+  createParent,
+  findParentById,
+  updateParentById,
+  listParentsByIds,
+  deleteParent,
+  addWalletPoints,
+  deductWalletPoints,
+  viewTransactionHistory,
 };
