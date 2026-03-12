@@ -119,6 +119,8 @@ export default function VaccinationTabScreen({ navigation, route }) {
   const [qrVisible, setQrVisible] = useState(false);
   const initialBabyId = route?.params?.babyId;
 
+  const getBabyId = (b) => b?.baby_id || b?.id || b?._id || null;
+
   const baby = babies[selectedIndex] || null;
 
   useEffect(() => {
@@ -137,7 +139,8 @@ export default function VaccinationTabScreen({ navigation, route }) {
           const idx = list.findIndex(
             (b) =>
               String(b.baby_id) === String(initialBabyId) ||
-              String(b.id) === String(initialBabyId),
+              String(b.id) === String(initialBabyId) ||
+              String(b._id) === String(initialBabyId),
           );
           if (idx >= 0) setSelectedIndex(idx);
         }
@@ -152,11 +155,11 @@ export default function VaccinationTabScreen({ navigation, route }) {
   }, [isLoggedIn, initialBabyId]);
 
   useEffect(() => {
-    if (!baby?.baby_id && !baby?.id) {
+    if (!baby?.baby_id && !baby?.id && !baby?._id) {
       setUpcoming(MOCK_UPCOMING);
       return;
     }
-    const id = baby.baby_id || baby.id;
+    const id = getBabyId(baby);
     const fetch = async () => {
       try {
         const res = await getVaccinationSchedules(id);
@@ -203,7 +206,7 @@ export default function VaccinationTabScreen({ navigation, route }) {
       }
     };
     fetch();
-  }, [baby?.baby_id, baby?.id]);
+  }, [baby?.baby_id, baby?.id, baby?._id]);
 
   if (!isLoggedIn) {
     return (
@@ -329,7 +332,7 @@ export default function VaccinationTabScreen({ navigation, route }) {
             <View style={styles.quickMenu}>
               {QUICK_MENU.map((item) => {
                 const Icon = item.lib;
-                const babyId = baby?.baby_id || baby?.id;
+                const babyId = getBabyId(baby);
                 const onPress =
                   item.key === "journal"
                     ? () =>
@@ -434,7 +437,7 @@ export default function VaccinationTabScreen({ navigation, route }) {
                 const avatarSrc = b.avt ?? b.avatar ?? b.avatar_url;
                 return (
                   <TouchableOpacity
-                    key={b.baby_id || b.id}
+                    key={getBabyId(b) || String(i)}
                     style={styles.pickerRow}
                     onPress={() => {
                       setSelectedIndex(i);

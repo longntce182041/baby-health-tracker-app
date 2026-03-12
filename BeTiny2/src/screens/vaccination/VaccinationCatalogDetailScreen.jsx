@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -8,59 +8,85 @@ import {
   Platform,
   StatusBar,
   Image,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { colors, typography } from '../../theme';
-import { VACCINES } from '../../data/vaccinationCatalog';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { colors, typography } from "../../theme";
+import { VACCINES } from "../../data/vaccinationCatalog";
 
 const { fontFamily } = typography;
-const PINK = '#F4ABB4';
+const PINK = "#F4ABB4";
 
 export default function VaccinationCatalogDetailScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const { vaccineId, babyId } = route.params || {};
+  const params = route.params || {};
+  const vaccineId = params.vaccineId;
+  const babyId =
+    params.babyId ||
+    params.baby_id ||
+    params.selectedBabyId ||
+    params.baby?._id ||
+    params.baby?.baby_id ||
+    params.baby?.id;
   const vaccine = VACCINES.find((v) => v.id === vaccineId) || VACCINES[0];
   const schedule = vaccine.schedule || [];
   const sideEffects = vaccine.sideEffects || [];
-  const contraindication = vaccine.contraindication || 'Tham khảo chỉ dẫn của bác sĩ trước khi tiêm.';
+  const contraindication =
+    vaccine.contraindication || "Tham khảo chỉ dẫn của bác sĩ trước khi tiêm.";
 
-  const doseMatch = (vaccine.doses || '').match(/^(\d+)\s+(.+)$/);
-  const doseValue = doseMatch ? doseMatch[1] : vaccine.doses || '—';
-  const doseLabel = doseMatch ? doseMatch[2] : 'Số mũi';
-  const ageValue = vaccine.ageRange || '—';
-  const originValue = vaccine.origin || '—';
+  const doseMatch = (vaccine.doses || "").match(/^(\d+)\s+(.+)$/);
+  const doseValue = doseMatch ? doseMatch[1] : vaccine.doses || "—";
+  const doseLabel = doseMatch ? doseMatch[2] : "Số mũi";
+  const ageValue = vaccine.ageRange || "—";
+  const originValue = vaccine.origin || "—";
 
   return (
     <View style={styles.container}>
-      {Platform.OS === 'android' && <StatusBar backgroundColor={PINK} barStyle="light-content" />}
+      {Platform.OS === "android" && (
+        <StatusBar backgroundColor={PINK} barStyle="light-content" />
+      )}
       <LinearGradient
-        colors={[PINK, '#FED3DD']}
+        colors={[PINK, "#FED3DD"]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle} numberOfLines={1}>Chi tiết vắc xin</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Chi tiết vắc xin
+          </Text>
           <View style={styles.headerSpacer} />
         </View>
       </LinearGradient>
 
       <ScrollView
         style={styles.scrollContainer}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 100 },
+        ]}
         showsVerticalScrollIndicator={true}
       >
         <View style={styles.quickInfo}>
-          <Text style={styles.quickInfoName} numberOfLines={2}>{vaccine.name}</Text>
+          <Text style={styles.quickInfoName} numberOfLines={2}>
+            {vaccine.name}
+          </Text>
           <View style={styles.quickInfoRowBlock}>
             <View style={styles.quickInfoImageWrap}>
               {vaccine.imageSource ? (
-                <Image source={vaccine.imageSource} style={styles.quickInfoImage} resizeMode="contain" />
+                <Image
+                  source={vaccine.imageSource}
+                  style={styles.quickInfoImage}
+                  resizeMode="contain"
+                />
               ) : (
                 <View style={styles.quickInfoImagePlaceholder}>
                   <Ionicons name="medical" size={32} color={PINK} />
@@ -74,11 +100,15 @@ export default function VaccinationCatalogDetailScreen({ route, navigation }) {
               </View>
               <View style={styles.quickInfoRow}>
                 <Text style={styles.quickInfoLabel}>Độ tuổi</Text>
-                <Text style={styles.quickInfoValue} numberOfLines={1}>{ageValue}</Text>
+                <Text style={styles.quickInfoValue} numberOfLines={1}>
+                  {ageValue}
+                </Text>
               </View>
               <View style={styles.quickInfoRow}>
                 <Text style={styles.quickInfoLabel}>Xuất xứ</Text>
-                <Text style={styles.quickInfoValue} numberOfLines={1}>{originValue}</Text>
+                <Text style={styles.quickInfoValue} numberOfLines={1}>
+                  {originValue}
+                </Text>
               </View>
             </View>
           </View>
@@ -97,14 +127,27 @@ export default function VaccinationCatalogDetailScreen({ route, navigation }) {
         {vaccine.preventionDesc && vaccine.preventionSolution && (
           <View style={styles.section}>
             <View style={styles.sectionTitleRow}>
-              <MaterialCommunityIcons name="shield-plus-outline" size={18} color={PINK} />
+              <MaterialCommunityIcons
+                name="shield-plus-outline"
+                size={18}
+                color={PINK}
+              />
               <Text style={styles.sectionTitle}>Cách phòng tránh bệnh</Text>
             </View>
             <View style={styles.preventionCard}>
-              <Text style={styles.preventionDesc}>{vaccine.preventionDesc}</Text>
+              <Text style={styles.preventionDesc}>
+                {vaccine.preventionDesc}
+              </Text>
               <View style={styles.preventionSolutionWrap}>
-                <MaterialCommunityIcons name="shield-check" size={20} color={colors.blueAccent} style={styles.preventionSolutionIcon} />
-                <Text style={styles.preventionSolutionText}>{vaccine.preventionSolution}</Text>
+                <MaterialCommunityIcons
+                  name="shield-check"
+                  size={20}
+                  color={colors.blueAccent}
+                  style={styles.preventionSolutionIcon}
+                />
+                <Text style={styles.preventionSolutionText}>
+                  {vaccine.preventionSolution}
+                </Text>
               </View>
             </View>
           </View>
@@ -121,7 +164,9 @@ export default function VaccinationCatalogDetailScreen({ route, navigation }) {
                 <View key={i} style={styles.scheduleStep}>
                   <View style={styles.stepDotWrap}>
                     <View style={styles.stepDot} />
-                    {i < schedule.length - 1 && <View style={styles.stepLine} />}
+                    {i < schedule.length - 1 && (
+                      <View style={styles.stepLine} />
+                    )}
                   </View>
                   <View style={styles.stepContent}>
                     <Text style={styles.stepTitle}>{step.title}</Text>
@@ -136,23 +181,53 @@ export default function VaccinationCatalogDetailScreen({ route, navigation }) {
         {sideEffects.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionTitleRow}>
-              <Ionicons name="shield-checkmark-outline" size={18} color={PINK} />
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={18}
+                color={PINK}
+              />
               <Text style={styles.sectionTitle}>Phản ứng sau tiêm</Text>
             </View>
             <View style={styles.effectRow}>
               <View style={styles.effectCard}>
                 {(sideEffects.slice(0, 2) || []).map((eff, i) => (
-                  <View key={i} style={[styles.effectRowItem, i === 1 && styles.effectRowItemLast]}>
-                    <Ionicons name="ellipse" size={6} color="#F59E0B" style={styles.effectBullet} />
-                    <Text style={styles.effectText} numberOfLines={2}>{eff}</Text>
+                  <View
+                    key={i}
+                    style={[
+                      styles.effectRowItem,
+                      i === 1 && styles.effectRowItemLast,
+                    ]}
+                  >
+                    <Ionicons
+                      name="ellipse"
+                      size={6}
+                      color="#F59E0B"
+                      style={styles.effectBullet}
+                    />
+                    <Text style={styles.effectText} numberOfLines={2}>
+                      {eff}
+                    </Text>
                   </View>
                 ))}
               </View>
               <View style={styles.effectCard}>
                 {(sideEffects.slice(2, 4) || []).map((eff, i) => (
-                  <View key={i} style={[styles.effectRowItem, i === 1 && styles.effectRowItemLast]}>
-                    <Ionicons name="ellipse" size={6} color="#F59E0B" style={styles.effectBullet} />
-                    <Text style={styles.effectText} numberOfLines={2}>{eff}</Text>
+                  <View
+                    key={i}
+                    style={[
+                      styles.effectRowItem,
+                      i === 1 && styles.effectRowItemLast,
+                    ]}
+                  >
+                    <Ionicons
+                      name="ellipse"
+                      size={6}
+                      color="#F59E0B"
+                      style={styles.effectBullet}
+                    />
+                    <Text style={styles.effectText} numberOfLines={2}>
+                      {eff}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -173,8 +248,8 @@ export default function VaccinationCatalogDetailScreen({ route, navigation }) {
         <TouchableOpacity
           style={styles.primaryBtn}
           onPress={() =>
-            navigation.navigate('VaccinationBooking', {
-              vaccineName: vaccine.name.replace(/\s+/g, ' ').trim(),
+            navigation.navigate("VaccinationBooking", {
+              vaccineName: vaccine.name.replace(/\s+/g, " ").trim(),
               vaccineId: vaccine.id,
               babyId,
             })
@@ -189,7 +264,7 @@ export default function VaccinationCatalogDetailScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC', overflow: 'visible' },
+  container: { flex: 1, backgroundColor: "#F8FAFC", overflow: "visible" },
   header: {
     paddingBottom: 36,
     paddingHorizontal: 16,
@@ -197,25 +272,25 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     flex: 1,
     fontSize: 18,
     fontFamily,
     color: colors.white,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
     marginHorizontal: 8,
   },
   headerSpacer: { width: 40, height: 40 },
@@ -223,7 +298,7 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
     marginTop: -28,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   content: { paddingHorizontal: 16, paddingTop: 0 },
 
@@ -231,14 +306,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
     marginTop: 0,
     marginBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(244, 171, 180, 0.25)',
+    borderColor: "rgba(244, 171, 180, 0.25)",
     ...Platform.select({
       ios: {
-        shadowColor: '#D4A5AD',
+        shadowColor: "#D4A5AD",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.22,
         shadowRadius: 14,
@@ -248,24 +323,24 @@ const styles = StyleSheet.create({
   },
   quickInfoName: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
     fontFamily,
     color: colors.text,
     marginBottom: 12,
   },
   quickInfoRowBlock: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   quickInfoImageWrap: {
     width: 88,
     height: 88,
     borderRadius: 14,
-    backgroundColor: '#FDF3F4',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FDF3F4",
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   quickInfoImage: {
     width: 88,
@@ -274,16 +349,16 @@ const styles = StyleSheet.create({
   quickInfoImagePlaceholder: {
     width: 88,
     height: 88,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   quickInfoBody: {
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
   },
   quickInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 6,
   },
   quickInfoLabel: {
@@ -295,41 +370,46 @@ const styles = StyleSheet.create({
   quickInfoValue: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily,
     color: PINK,
   },
 
   section: { marginTop: 22 },
   sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
     fontFamily,
     color: colors.text,
     marginLeft: 8,
   },
   scheduleCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingVertical: 16,
     paddingHorizontal: 18,
     borderRadius: 22,
     borderLeftWidth: 5,
     borderLeftColor: PINK,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+      },
       android: { elevation: 2 },
     }),
   },
   scheduleStep: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 14,
   },
-  stepDotWrap: { alignItems: 'center', marginRight: 14 },
+  stepDotWrap: { alignItems: "center", marginRight: 14 },
   stepDot: {
     width: 10,
     height: 10,
@@ -340,13 +420,13 @@ const styles = StyleSheet.create({
     width: 2,
     flex: 1,
     minHeight: 28,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: "#E2E8F0",
     marginTop: 4,
   },
   stepContent: { flex: 1 },
   stepTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     fontFamily,
     color: colors.text,
   },
@@ -359,19 +439,19 @@ const styles = StyleSheet.create({
   },
 
   effectRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
   },
   effectCard: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 16,
   },
   effectRowItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 6,
   },
   effectRowItemLast: { marginBottom: 0 },
@@ -385,29 +465,34 @@ const styles = StyleSheet.create({
   },
 
   contraBox: {
-    backgroundColor: '#FFF1F2',
+    backgroundColor: "#FFF1F2",
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 18,
     borderLeftWidth: 4,
-    borderLeftColor: '#E11D48',
+    borderLeftColor: "#E11D48",
   },
   contraText: {
     fontSize: 12,
     fontFamily,
-    color: '#B91C1C',
+    color: "#B91C1C",
     lineHeight: 20,
   },
 
   detailCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingVertical: 16,
     paddingHorizontal: 18,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: 'rgba(244, 171, 180, 0.35)',
+    borderColor: "rgba(244, 171, 180, 0.35)",
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+      },
       android: { elevation: 2 },
     }),
   },
@@ -416,18 +501,23 @@ const styles = StyleSheet.create({
     fontFamily,
     color: colors.textSecondary,
     lineHeight: 22,
-    textAlign: 'justify',
+    textAlign: "justify",
   },
 
   preventionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 22,
     padding: 16,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: 'rgba(244, 171, 180, 0.35)',
+    borderColor: "rgba(244, 171, 180, 0.35)",
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 12 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+      },
       android: { elevation: 2 },
     }),
   },
@@ -437,25 +527,25 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 14,
-    textAlign: 'justify',
+    textAlign: "justify",
   },
   preventionSolutionWrap: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
-    backgroundColor: '#F0F7FD',
+    backgroundColor: "#F0F7FD",
     borderRadius: 16,
     padding: 12,
     paddingHorizontal: 15,
     borderLeftWidth: 4,
-    borderLeftColor: colors.blueAccent || '#3B82F6',
+    borderLeftColor: colors.blueAccent || "#3B82F6",
   },
   preventionSolutionIcon: { marginTop: 2 },
   preventionSolutionText: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     fontFamily,
-    color: '#5D7A94',
+    color: "#5D7A94",
     lineHeight: 19,
   },
 
@@ -465,17 +555,22 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginTop: 28,
     marginBottom: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...Platform.select({
-      ios: { shadowColor: PINK, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12 },
+      ios: {
+        shadowColor: PINK,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+      },
       android: { elevation: 4 },
     }),
   },
   primaryBtnText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
     fontFamily,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
   },
 });

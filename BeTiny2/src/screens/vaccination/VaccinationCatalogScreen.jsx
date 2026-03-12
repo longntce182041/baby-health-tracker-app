@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,12 @@ import {
   StatusBar,
   TextInput,
   Image,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, typography } from '../../theme';
-import { VACCINES, MILESTONES } from '../../data/vaccinationCatalog';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, typography } from "../../theme";
+import { VACCINES, MILESTONES } from "../../data/vaccinationCatalog";
 
 const { fontFamily } = typography;
 
@@ -24,8 +24,14 @@ function getVaccineById(id) {
 
 export default function VaccinationCatalogScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const [search, setSearch] = useState('');
-  const babyId = route?.params?.babyId;
+  const [search, setSearch] = useState("");
+  const babyId =
+    route?.params?.babyId ||
+    route?.params?.baby_id ||
+    route?.params?.selectedBabyId ||
+    route?.params?.baby?._id ||
+    route?.params?.baby?.baby_id ||
+    route?.params?.baby?.id;
 
   const searchLower = search.trim().toLowerCase();
   const filteredMilestones = MILESTONES.map((stage) => ({
@@ -33,22 +39,30 @@ export default function VaccinationCatalogScreen({ navigation, route }) {
     vaccineIds: stage.vaccineIds.filter(
       (item) =>
         !searchLower ||
-        getVaccineById(item.vaccineId)?.name.toLowerCase().includes(searchLower) ||
-        item.doseLabel.toLowerCase().includes(searchLower)
+        getVaccineById(item.vaccineId)
+          ?.name.toLowerCase()
+          .includes(searchLower) ||
+        item.doseLabel.toLowerCase().includes(searchLower),
     ),
   })).filter((stage) => stage.vaccineIds.length > 0);
 
   return (
     <View style={styles.container}>
-      {Platform.OS === 'android' && <StatusBar backgroundColor="#F4ABB4" barStyle="light-content" />}
+      {Platform.OS === "android" && (
+        <StatusBar backgroundColor="#F4ABB4" barStyle="light-content" />
+      )}
       <LinearGradient
-        colors={['#F4ABB4', '#FED3DD']}
+        colors={["#F4ABB4", "#FED3DD"]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={[styles.headerGrad, { paddingTop: insets.top + 12 }]}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
             <Ionicons name="arrow-back" size={22} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Danh mục vắc xin</Text>
@@ -58,7 +72,12 @@ export default function VaccinationCatalogScreen({ navigation, route }) {
 
       <View style={styles.searchWrapper}>
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
+          <Ionicons
+            name="search"
+            size={20}
+            color={colors.textMuted}
+            style={styles.searchIcon}
+          />
           <TextInput
             style={styles.searchInput}
             placeholder="Tìm theo tên"
@@ -71,17 +90,26 @@ export default function VaccinationCatalogScreen({ navigation, route }) {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 100 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {filteredMilestones.map((stage) => (
           <View key={stage.id} style={styles.stageBlock}>
             <View style={styles.stageHeader}>
-              <Ionicons name="calendar-outline" size={20} color={colors.pinkAccent} />
+              <Ionicons
+                name="calendar-outline"
+                size={20}
+                color={colors.pinkAccent}
+              />
               <View style={styles.stageHeaderText}>
                 <Text style={styles.stageTitle}>{stage.title}</Text>
                 {stage.subtitle ? (
-                  <Text style={styles.stageSubtitle} numberOfLines={1}>{stage.subtitle}</Text>
+                  <Text style={styles.stageSubtitle} numberOfLines={1}>
+                    {stage.subtitle}
+                  </Text>
                 ) : null}
               </View>
             </View>
@@ -94,7 +122,7 @@ export default function VaccinationCatalogScreen({ navigation, route }) {
                   style={styles.infoCard}
                   activeOpacity={0.9}
                   onPress={() =>
-                    navigation.navigate('VaccinationCatalogDetail', {
+                    navigation.navigate("VaccinationCatalogDetail", {
                       vaccineId: v.id,
                       babyId,
                     })
@@ -102,22 +130,32 @@ export default function VaccinationCatalogScreen({ navigation, route }) {
                 >
                   <View style={styles.cardImageWrap}>
                     {v.imageSource ? (
-                      <Image source={v.imageSource} style={styles.cardImage} resizeMode="contain" />
+                      <Image
+                        source={v.imageSource}
+                        style={styles.cardImage}
+                        resizeMode="contain"
+                      />
                     ) : (
                       <View style={styles.cardImagePlaceholder}>
-                        <Ionicons name="medical-outline" size={48} color={colors.pinkAccent} />
+                        <Ionicons
+                          name="medical-outline"
+                          size={48}
+                          color={colors.pinkAccent}
+                        />
                       </View>
                     )}
                   </View>
                   <View style={styles.cardContent}>
                     <View style={styles.vTag}>
                       <Ionicons
-                        name={v.isOral ? 'water-outline' : 'medical-outline'}
+                        name={v.isOral ? "water-outline" : "medical-outline"}
                         size={10}
                         color={colors.textSecondary}
                         style={styles.vTagIcon}
                       />
-                      <Text style={styles.vTagText}>{v.doses.toUpperCase()}</Text>
+                      <Text style={styles.vTagText}>
+                        {v.doses.toUpperCase()}
+                      </Text>
                     </View>
                     <Text style={styles.vName}>{v.name}</Text>
                     <Text style={styles.doseLabel}>{item.doseLabel}</Text>
@@ -144,19 +182,24 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   headerBtn: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerTitle: { ...typography.H3, fontFamily, color: colors.white, fontWeight: '600' },
+  headerTitle: {
+    ...typography.H3,
+    fontFamily,
+    color: colors.white,
+    fontWeight: "600",
+  },
   headerSpacer: { width: 40, height: 40 },
 
   searchWrapper: {
@@ -165,17 +208,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.white,
     borderRadius: 20,
     paddingVertical: 12,
     paddingLeft: 18,
     paddingRight: 14,
     borderWidth: 1,
-    borderColor: 'rgba(244, 171, 180, 0.3)',
+    borderColor: "rgba(244, 171, 180, 0.3)",
     ...Platform.select({
-      ios: { shadowColor: '#F4ABB4', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+      ios: {
+        shadowColor: "#F4ABB4",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
       android: { elevation: 3 },
     }),
   },
@@ -186,7 +234,7 @@ const styles = StyleSheet.create({
     fontFamily,
     color: colors.text,
     paddingVertical: 0,
-    textAlign: 'left',
+    textAlign: "left",
   },
 
   scroll: { flex: 1 },
@@ -194,21 +242,21 @@ const styles = StyleSheet.create({
 
   stageBlock: { marginBottom: 24 },
   stageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
-    backgroundColor: '#FFF0F1',
+    backgroundColor: "#FFF0F1",
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 20,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(244, 171, 180, 0.3)',
+    borderColor: "rgba(244, 171, 180, 0.3)",
   },
   stageHeaderText: { flex: 1 },
   stageTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: "800",
     fontFamily,
     color: colors.pinkAccent,
   },
@@ -220,70 +268,80 @@ const styles = StyleSheet.create({
   },
 
   infoCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderRadius: 25,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 14,
     minHeight: 120,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: '#F4ABB4',
+    borderColor: "#F4ABB4",
     ...Platform.select({
-      ios: { shadowColor: '#F4ABB4', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 8 },
+      ios: {
+        shadowColor: "#F4ABB4",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+      },
       android: { elevation: 3 },
     }),
   },
   cardImageWrap: {
-    width: '38%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "38%",
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 8,
   },
   cardImage: {
-    width: '100%',
+    width: "100%",
     height: 100,
   },
   cardImagePlaceholder: {
-    width: '100%',
+    width: "100%",
     height: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cardContent: {
-    width: '62%',
+    width: "62%",
     paddingVertical: 10,
     paddingLeft: 12,
     paddingRight: 14,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   vTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     gap: 4,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#F4ABB4',
+    borderColor: "#F4ABB4",
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 10,
     marginBottom: 6,
     ...Platform.select({
-      ios: { shadowColor: '#F4ABB4', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 4 },
+      ios: {
+        shadowColor: "#F4ABB4",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+      },
       android: { elevation: 1 },
     }),
   },
   vTagIcon: {},
   vTagText: {
     fontSize: 9,
-    fontWeight: '700',
+    fontWeight: "700",
     fontFamily,
     color: colors.textSecondary,
   },
   vName: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: "800",
     fontFamily,
     color: colors.text,
     marginBottom: 2,
@@ -294,7 +352,7 @@ const styles = StyleSheet.create({
     fontFamily,
     color: colors.pinkAccent,
     marginBottom: 4,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   vSummary: {
     fontSize: 11,

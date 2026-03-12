@@ -56,18 +56,27 @@ function getAgeString(dateOfBirth) {
 
 export default function VaccinationBookConfirmScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
+  const params = route.params || {};
   const {
     vaccineName = "Viêm gan B",
     vaccineId,
     centerId,
     centerName = "Phòng khám A",
     centerAddress,
-    babyId,
-    babyName = "Bé Mỡ",
+    babyId: routeBabyId,
+    babyName,
     babyDob,
     babyAvatar,
     fee = "850,000 VND",
-  } = route.params || {};
+  } = params;
+
+  const extractBabyId = (item) =>
+    item?.baby_id || item?.id || item?._id || item || null;
+  const babyId =
+    extractBabyId(routeBabyId) ||
+    params?.baby_id ||
+    params?.selectedBabyId ||
+    extractBabyId(params?.baby);
 
   const now = new Date();
   const [currentYear, setCurrentYear] = useState(now.getFullYear());
@@ -75,7 +84,7 @@ export default function VaccinationBookConfirmScreen({ route, navigation }) {
   const [selectedDay, setSelectedDay] = useState(15);
   const [selectedTime, setSelectedTime] = useState("08:00");
   const [baby, setBaby] = useState(null);
-  const [resolvedBabyId, setResolvedBabyId] = useState(babyId || null);
+  const [resolvedBabyId, setResolvedBabyId] = useState(extractBabyId(babyId));
   const [loadingBaby, setLoadingBaby] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -83,8 +92,9 @@ export default function VaccinationBookConfirmScreen({ route, navigation }) {
     let mounted = true;
 
     const resolveBabyId = async () => {
-      if (babyId) {
-        setResolvedBabyId(babyId);
+      const normalizedBabyId = extractBabyId(babyId);
+      if (normalizedBabyId) {
+        setResolvedBabyId(normalizedBabyId);
         return;
       }
 
@@ -95,8 +105,17 @@ export default function VaccinationBookConfirmScreen({ route, navigation }) {
           : Array.isArray(res?.data)
             ? res.data
             : [];
+        const selectedByName = list.find((item) => {
+          const itemName = item?.full_name || item?.name || item?.fullName;
+          return (
+            babyName &&
+            String(itemName || "")
+              .trim()
+              .toLowerCase() === String(babyName).trim().toLowerCase()
+          );
+        });
         const fallbackId =
-          list[0]?.baby_id || list[0]?.id || list[0]?._id || null;
+          extractBabyId(selectedByName) || extractBabyId(list[0]);
         if (mounted) {
           setResolvedBabyId(fallbackId);
         }
@@ -111,7 +130,7 @@ export default function VaccinationBookConfirmScreen({ route, navigation }) {
     return () => {
       mounted = false;
     };
-  }, [babyId]);
+  }, [babyId, babyName]);
 
   const daysGrid = useMemo(
     () => getDaysInMonth(currentYear, currentMonth),
@@ -138,7 +157,11 @@ export default function VaccinationBookConfirmScreen({ route, navigation }) {
   }, [resolvedBabyId]);
 
   const displayBabyName =
-    baby?.full_name || baby?.name || baby?.fullName || babyName;
+    baby?.full_name ||
+    baby?.name ||
+    baby?.fullName ||
+    babyName ||
+    "Chưa chọn bé";
   const displayBabyDob = baby?.date_of_birth || baby?.dob || babyDob;
   const rawAvatar = baby?.avt ?? baby?.avatar ?? baby?.avatar_url ?? babyAvatar;
   const isAvatarUri =
@@ -174,7 +197,9 @@ export default function VaccinationBookConfirmScreen({ route, navigation }) {
     return `${d}/${m}/${currentYear} - ${selectedTime}`;
   }, [selectedDay, currentMonth, currentYear, selectedTime]);
 
-  const ageStr = displayBabyDob ? getAgeString(displayBabyDob) : "6 tháng tuổi";
+  const ageStr = displayBabyDob
+    ? getAgeString(displayBabyDob)
+    : "Chưa có ngày sinh";
   const [qrVisible, setQrVisible] = useState(false);
 
   const buildInjectionDate = () => {
@@ -269,22 +294,6 @@ export default function VaccinationBookConfirmScreen({ route, navigation }) {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.profileCard}>
-          {isAvatarUri ? (
-            <Image source={{ uri: rawAvatar }} style={styles.profileImg} />
-          ) : isAvatarLocal ? (
-            <Image source={rawAvatar} style={styles.profileImg} />
-          ) : (
-            <View style={styles.profileImgPlaceholder}>
-              <Ionicons name="person" size={28} color={colors.pinkAccent} />
-            </View>
-          )}
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{displayBabyName}</Text>
-            <Text style={styles.profileAge}>{ageStr}</Text>
-          </View>
-        </View>
-
         <View style={styles.selectionCard}>
           <Text style={styles.sectionTitle}>CHỌN NGÀY & GIỜ</Text>
           <View style={styles.monthYearRow}>

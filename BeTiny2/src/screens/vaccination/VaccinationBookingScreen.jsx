@@ -35,9 +35,16 @@ const STOP_WORDS = new Set([
 
 export default function VaccinationBookingScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
-  const vaccineName = route.params?.vaccineName || "Tiêm chủng";
-  const vaccineId = route.params?.vaccineId;
-  const babyId = route.params?.babyId;
+  const params = route.params || {};
+  const vaccineName = params?.vaccineName || "Tiêm chủng";
+  const vaccineId = params?.vaccineId;
+  const babyId =
+    params?.babyId ||
+    params?.baby_id ||
+    params?.selectedBabyId ||
+    params?.baby?._id ||
+    params?.baby?.baby_id ||
+    params?.baby?.id;
   const [search, setSearch] = useState("");
   const [centers, setCenters] = useState([]);
   const [resolvedVaccineId, setResolvedVaccineId] = useState(vaccineId || null);
